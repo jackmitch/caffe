@@ -20,6 +20,7 @@ void LevelDB::Open(const string& source, Mode mode) {
   LOG(INFO) << "Opened leveldb " << source;
 }
 
+#ifndef _MSC_VER
 void LMDB::Open(const string& source, Mode mode) {
   MDB_CHECK(mdb_env_create(&mdb_env_));
   MDB_CHECK(mdb_env_set_mapsize(mdb_env_, LMDB_MAP_SIZE));
@@ -58,13 +59,16 @@ void LMDBTransaction::Put(const string& key, const string& value) {
   mdb_value.mv_size = value.size();
   MDB_CHECK(mdb_put(mdb_txn_, *mdb_dbi_, &mdb_key, &mdb_value, 0));
 }
+#endif
 
 DB* GetDB(DataParameter::DB backend) {
   switch (backend) {
   case DataParameter_DB_LEVELDB:
     return new LevelDB();
   case DataParameter_DB_LMDB:
+#ifndef _MSC_VER
     return new LMDB();
+#endif
   default:
     LOG(FATAL) << "Unknown database backend";
   }
@@ -74,7 +78,9 @@ DB* GetDB(const string& backend) {
   if (backend == "leveldb") {
     return new LevelDB();
   } else if (backend == "lmdb") {
+#ifndef _MSC_VER
     return new LMDB();
+#endif
   } else {
     LOG(FATAL) << "Unknown database backend";
   }

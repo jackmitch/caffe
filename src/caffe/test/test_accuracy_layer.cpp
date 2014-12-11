@@ -114,6 +114,7 @@ TYPED_TEST(AccuracyLayerTest, TestForwardCPU) {
 
 TYPED_TEST(AccuracyLayerTest, TestForwardCPUTopK) {
   LayerParameter layer_param;
+  Caffe::set_mode(Caffe::CPU);
   AccuracyParameter* accuracy_param = layer_param.mutable_accuracy_param();
   accuracy_param->set_top_k(this->top_k_);
   AccuracyLayer<TypeParam> layer(layer_param);

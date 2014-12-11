@@ -17,6 +17,9 @@ using caffe::CAFFE_TEST_CUDA_PROP;
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   caffe::GlobalInit(&argc, &argv);
+#ifdef _MSC_VER
+  caffe::InitLayerFactory();
+#endif
 #ifndef CPU_ONLY
   // Before starting testing, let's first print out a few cuda defice info.
   int device;

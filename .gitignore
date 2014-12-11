@@ -67,7 +67,7 @@ models/*
 *lmdb
 
 # build, distribute, and bins (+ python proto bindings)
-build
+#build
 .build_debug/*
 .build_release/*
 distribute/*
@@ -83,6 +83,7 @@ docs/gathered
 _site
 doxygen
 docs/dev
+3rdparty/*
 
 # LevelDB files
 *.sst
@@ -91,3 +92,16 @@ LOCK
 LOG*
 CURRENT
 MANIFEST-*
+/bin/x86
+/bin/x64
+/build/MSVC/Debug
+/build/MSVC/DebugCPUOnly
+/build/MSVC/Release
+/build/MSVC/ReleaseCPUOnly
+/build/MSVC/x64/ReleaseCPUOnly
+/build/src/caffe/layers
+/build/MSVC/x64/Release
+/build/MSVC/x64/DebugCPUOnly
+/build/MSVC/x64/Debug
+/build/MSVC/src/caffe/layers
+/lib

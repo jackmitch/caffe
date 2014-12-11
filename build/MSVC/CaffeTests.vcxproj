@@ -1,0 +1,443 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="DebugCPUOnly|Win32">
+      <Configuration>DebugCPUOnly</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="DebugCPUOnly|x64">
+      <Configuration>DebugCPUOnly</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseCPUOnly|Win32">
+      <Configuration>ReleaseCPUOnly</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseCPUOnly|x64">
+      <Configuration>ReleaseCPUOnly</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\gtest\gtest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\caffe\test\test_accuracy_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_argmax_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_benchmark.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_blob.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_caffe_main.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_common.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_concat_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_contrastive_loss_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_convolution_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_data_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_data_transformer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_db.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_deconvolution_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_dummy_data_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_eltwise_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_euclidean_loss_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_filler.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_flatten_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_gradient_based_solver.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_hinge_loss_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_im2col_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_image_data_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_infogain_loss_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_inner_product_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_internal_thread.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_io.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_lrn_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_math_functions.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_maxpool_dropout_layers.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_memory_data_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_multinomial_logistic_loss_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_mvn_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_net.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_neuron_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_platform.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_pooling_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_power_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_protobuf.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_random_number_generator.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_sigmoid_cross_entropy_loss_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_slice_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_softmax_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_softmax_with_loss_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_solver.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_split_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_stochastic_pooling.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_syncedmem.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_tanh_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_threshold_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_upgrade_proto.cpp" />
+    <ClCompile Include="..\..\src\caffe\test\test_util_blas.cpp" />
+    <ClCompile Include="..\..\src\gtest\gtest-all.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\src\caffe\test\test_im2col_kernel.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseCPUOnly|Win32'">true</ExcludedFromBuild>
+    </None>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{66D5BDC2-25BB-41C1-8AD6-41EDB4FDA7DB}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>CaffeTests</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugCPUOnly|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugCPUOnly|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseCPUOnly|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseCPUOnly|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugCPUOnly|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugCPUOnly|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseCPUOnly|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseCPUOnly|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)$(Configuration)\</IntDir>
+    <LibraryPath>$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
+    <TargetName>caffed_x86_tests</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LibraryPath>$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <TargetName>caffed_x64_tests</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugCPUOnly|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)$(Configuration)\</IntDir>
+    <TargetName>caffed_cpu_only_x86_tests</TargetName>
+    <LibraryPath>$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugCPUOnly|x64'">
+    <TargetName>caffed_cpu_only_x64_tests</TargetName>
+    <LibraryPath>$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <LibraryPath>$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
+    <TargetName>caffe_x86_tests</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <LibraryPath>$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
+    <TargetName>caffe_x64_tests</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseCPUOnly|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <IntDir>$(SolutionDir)$(Configuration)\</IntDir>
+    <TargetName>caffe_cpu_only_x86_tests</TargetName>
+    <LibraryPath>$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseCPUOnly|x64'">
+    <TargetName>caffe_cpu_only_x64_tests</TargetName>
+    <LibraryPath>$(CudaToolkitLibDir);$(LibraryPath)</LibraryPath>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_VARIADIC_MAX=10;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>../../src;../../include;../../3rdparty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>caffed_x86.lib;shlwapi.lib;libprotobufd.lib;libboost_date_time-vc110-mt-gd-1_55.lib;libboost_thread-vc110-mt-gd-1_55.lib;libboost_chrono-vc110-mt-gd-1_55.lib;libboost_filesystem-vc110-mt-gd-1_55.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib;$(ProjectDir)..\..\3rdparty\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /y $(OutDir)caffed_x86_tests.exe $(ProjectDir)..\..\bin\x86\
+rmdir /s /q $(ProjectDir)..\..\bin\x86\temp
+if not exist $(ProjectDir)..\..\bin\x86\examples\images mkdir $(ProjectDir)..\..\bin\x86\examples\images
+copy /y $(ProjectDir)..\..\examples\images\*.jpg $(ProjectDir)..\..\bin\x86\examples\images</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_VARIADIC_MAX=10;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>../../src;../../include;../../3rdparty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>caffed_x64.lib;shlwapi.lib;libprotobufd.lib;libboost_date_time-vc110-mt-gd-1_55.lib;libboost_thread-vc110-mt-gd-1_55.lib;libboost_chrono-vc110-mt-gd-1_55.lib;libboost_filesystem-vc110-mt-gd-1_55.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib;$(ProjectDir)..\..\3rdparty\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /y $(OutDir)caffed_x64_tests.exe $(ProjectDir)..\..\bin\x64\
+rmdir /s /q $(ProjectDir)..\..\bin\x64\temp
+if not exist $(ProjectDir)..\..\bin\x64\examples\images mkdir $(ProjectDir)..\..\bin\x64\examples\images
+copy /y $(ProjectDir)..\..\examples\images\*.jpg $(ProjectDir)..\..\bin\x64\examples\images</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugCPUOnly|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_VARIADIC_MAX=10;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;CPU_ONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>../../src;../../include;../../3rdparty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>caffed_cpu_only_x86.lib;shlwapi.lib;libboost_date_time-vc110-mt-gd-1_55.lib;libboost_thread-vc110-mt-gd-1_55.lib;libboost_chrono-vc110-mt-gd-1_55.lib;libboost_filesystem-vc110-mt-gd-1_55.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib;$(ProjectDir)..\..\3rdparty\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /y $(OutDir)caffed_cpu_only_x86_tests.exe $(ProjectDir)..\..\bin\x86\
+rmdir /s /q $(ProjectDir)..\..\bin\x86\temp
+if not exist $(ProjectDir)..\..\bin\x86\examples\images mkdir $(ProjectDir)..\..\bin\x86\examples\images
+copy /y $(ProjectDir)..\..\examples\images\*.jpg $(ProjectDir)..\..\bin\x86\examples\images</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugCPUOnly|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_VARIADIC_MAX=10;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;CPU_ONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>../../src;../../include;../../3rdparty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>caffed_cpu_only_x64.lib;shlwapi.lib;libboost_date_time-vc110-mt-gd-1_55.lib;libboost_thread-vc110-mt-gd-1_55.lib;libboost_chrono-vc110-mt-gd-1_55.lib;libboost_filesystem-vc110-mt-gd-1_55.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib;$(ProjectDir)..\..\3rdparty\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /y $(OutDir)caffed_cpu_only_x64_tests.exe $(ProjectDir)..\..\bin\x64\
+rmdir /s /q $(ProjectDir)..\..\bin\x64\temp
+if not exist $(ProjectDir)..\..\bin\x64\examples\images mkdir $(ProjectDir)..\..\bin\x64\examples\images
+copy /y $(ProjectDir)..\..\examples\images\*.jpg $(ProjectDir)..\..\bin\x64\examples\images</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_VARIADIC_MAX=10;_CRT_SECURE_NO_WARNINGS;CPU_ONLY;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>../../src;../../include;../../3rdparty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib;$(ProjectDir)..\..\3rdparty\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>caffe_x86.lib;shlwapi.lib;libprotobuf.lib;libboost_date_time-vc110-mt-1_55.lib;libboost_thread-vc110-mt-1_55.lib;libboost_chrono-vc110-mt-1_55.lib;libboost_filesystem-vc110-mt-1_55.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /y $(OutDir)caffe_cpu_only_x86_tests.exe $(ProjectDir)..\..\bin\x86\
+rmdir /s /q $(ProjectDir)..\..\bin\x86\temp
+if not exist $(ProjectDir)..\..\bin\x86\examples\images mkdir $(ProjectDir)..\..\bin\x86\examples\images
+copy /y $(ProjectDir)..\..\examples\images\*.jpg $(ProjectDir)..\..\bin\x86\examples\images</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_VARIADIC_MAX=10;_CRT_SECURE_NO_WARNINGS;CPU_ONLY;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>../../src;../../include;../../3rdparty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib;$(ProjectDir)..\..\3rdparty\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>caffe_x64.lib;shlwapi.lib;libprotobuf.lib;libboost_date_time-vc110-mt-1_55.lib;libboost_thread-vc110-mt-1_55.lib;libboost_chrono-vc110-mt-1_55.lib;libboost_filesystem-vc110-mt-1_55.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /y $(OutDir)caffe_x64_tests.exe $(ProjectDir)..\..\bin\x64\
+rmdir /s /q $(ProjectDir)..\..\bin\x64\temp
+if not exist $(ProjectDir)..\..\bin\x64\examples\images mkdir $(ProjectDir)..\..\bin\x64\examples\images
+copy /y $(ProjectDir)..\..\examples\images\*.jpg $(ProjectDir)..\..\bin\x64\examples\images</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseCPUOnly|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_VARIADIC_MAX=10;_CRT_SECURE_NO_WARNINGS;CPU_ONLY;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>../../src;../../include;../../3rdparty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>caffe_cpu_only_x86.lib;shlwapi.lib;libboost_date_time-vc110-mt-1_55.lib;libboost_thread-vc110-mt-1_55.lib;libboost_chrono-vc110-mt-1_55.lib;libboost_filesystem-vc110-mt-1_55.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib;$(ProjectDir)..\..\3rdparty\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /y $(OutDir)caffe_cpu_only_x86_tests.exe $(ProjectDir)..\..\bin\x86\
+rmdir /s /q $(ProjectDir)..\..\bin\x86\temp
+if not exist $(ProjectDir)..\..\bin\x86\examples\images mkdir $(ProjectDir)..\..\bin\x86\examples\images
+copy /y $(ProjectDir)..\..\examples\images\*.jpg $(ProjectDir)..\..\bin\x86\examples\images</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseCPUOnly|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_VARIADIC_MAX=10;_CRT_SECURE_NO_WARNINGS;CPU_ONLY;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>../../src;../../include;../../3rdparty/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>caffe_cpu_only_x64.lib;shlwapi.lib;libboost_date_time-vc110-mt-1_55.lib;libboost_thread-vc110-mt-1_55.lib;libboost_chrono-vc110-mt-1_55.lib;libboost_filesystem-vc110-mt-1_55.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib;$(ProjectDir)..\..\3rdparty\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /y $(OutDir)caffe_cpu_only_x64_tests.exe $(ProjectDir)..\..\bin\x64\
+rmdir /s /q $(ProjectDir)..\..\bin\x64\temp
+if not exist $(ProjectDir)..\..\bin\x64\examples\images mkdir $(ProjectDir)..\..\bin\x64\examples\images
+copy /y $(ProjectDir)..\..\examples\images\*.jpg $(ProjectDir)..\..\bin\x64\examples\images</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.targets" />
+  </ImportGroup>
+</Project>

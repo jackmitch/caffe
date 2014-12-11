@@ -2,6 +2,10 @@
 #include <cstdio>
 #include <ctime>
 
+#ifdef _MSC_VER
+#include <process.h>
+#endif
+
 #include "caffe/common.hpp"
 #include "caffe/util/rng.hpp"
 
@@ -12,6 +16,8 @@ shared_ptr<Caffe> Caffe::singleton_;
 // random seeding
 int64_t cluster_seedgen(void) {
   int64_t s, seed, pid;
+
+#ifndef _MSC_VER
   FILE* f = fopen("/dev/urandom", "rb");
   if (f && fread(&seed, 1, sizeof(seed), f) == sizeof(seed)) {
     fclose(f);
@@ -24,6 +30,9 @@ int64_t cluster_seedgen(void) {
     fclose(f);
 
   pid = getpid();
+#else
+  pid = _getpid();
+#endif
   s = time(NULL);
   seed = abs(((s * 181) * ((pid - 83) * 359)) % 104729);
   return seed;
@@ -35,9 +44,15 @@ void GlobalInit(int* pargc, char*** pargv) {
   ::gflags::ParseCommandLineFlags(pargc, pargv, true);
   // Google logging.
   ::google::InitGoogleLogging(*(pargv)[0]);
+#ifndef _MSC_VER
   // Provide a backtrace on segfault.
   ::google::InstallFailureSignalHandler();
+#endif
 }
+
+Caffe::Brew Caffe::mode() { return Get().mode_; }
+
+void Caffe::set_mode(Brew mode) { Get().mode_ = mode; }
 
 #ifdef CPU_ONLY  // CPU-only Caffe.
 

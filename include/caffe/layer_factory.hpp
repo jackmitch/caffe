@@ -109,6 +109,7 @@ class LayerRegisterer {
   }
 };
 
+#ifndef _MSC_VER
 
 #define REGISTER_LAYER_CREATOR(type, creator)                                  \
   static LayerRegisterer<float> g_creator_f_##type(#type, creator<float>);     \
@@ -121,6 +122,46 @@ class LayerRegisterer {
     return shared_ptr<Layer<Dtype> >(new type##Layer<Dtype>(param));           \
   }                                                                            \
   REGISTER_LAYER_CREATOR(type, Creator_##type##Layer)
+
+#else
+	// VS compiler optimises the static variables out of the library. Not sure why but
+	// guess it thinks the variables aren't used internally and have no external interface
+	// so it doesn't need to bother with them. i.e. it ignroes the static variables
+	// created by REGISTER_LAYER_CREATOR macro. Couldn't get round it with the linker
+	// settings so had to brute force it with a LayerRegisterInit function, ugly I know.
+	// This needs to be called at the begining of the exe or dll using the library
+
+	#define REGISTER_LAYER_CREATOR(type, creator)             ;               
+
+	#define REGISTER_LAYER_CREATOR_MSC_VER(type, creator)					\
+	  static LayerRegisterer<float> g_creator_f_##type(#type, creator<float>); \
+	  static LayerRegisterer<double> g_creator_d_##type(#type, creator<double>)	
+
+	#define REGISTER_LAYER_CLASS(type)             ;
+	#define REGISTER_LAYER_CLASS_MSC_VER(type)								                \
+	  template <typename Dtype>                                               \
+    shared_ptr<Layer<Dtype> > Creator_##type##Layer(const LayerParameter& param) \
+    {                                                                       \
+      return shared_ptr<Layer<Dtype> >(new type##Layer<Dtype>(param));      \
+	  }
+	#define REGISTER_LAYER_CREATOR_CLASS_MSC_VER(type)	\
+	  REGISTER_LAYER_CREATOR_MSC_VER(type, Creator_##type##Layer)
+
+	bool InitLayerFactory();
+#endif
+
+
+
+// A function to get a specific layer from the specification given in
+// LayerParameter. Ideally this would be replaced by a factory pattern,
+// but we will leave it this way for now.
+// Yangqing's note: With LayerRegistry, we no longer need this thin wrapper any
+// more. It is provided here for backward compatibility and should be removed in
+// the future.
+template <typename Dtype>
+Layer<Dtype>* GetLayer(const LayerParameter& param) {
+  return LayerRegistry<Dtype>::CreateLayer(param);
+}
 
 }  // namespace caffe
 

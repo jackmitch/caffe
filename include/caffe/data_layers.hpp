@@ -6,7 +6,12 @@
 #include <vector>
 
 #include "boost/scoped_ptr.hpp"
+#ifndef _MSC_VER
 #include "hdf5.h"
+#else
+#define hsize_t size_t
+#define hid_t int
+#endif
 
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"

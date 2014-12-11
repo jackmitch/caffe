@@ -58,6 +58,7 @@ TYPED_TEST(ArgMaxLayerTest, TestSetupMaxVal) {
 
 TYPED_TEST(ArgMaxLayerTest, TestCPU) {
   LayerParameter layer_param;
+  Caffe::set_mode(Caffe::CPU);
   ArgMaxLayer<TypeParam> layer(layer_param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -84,6 +85,9 @@ TYPED_TEST(ArgMaxLayerTest, TestCPUMaxVal) {
   ArgMaxParameter* argmax_param = layer_param.mutable_argmax_param();
   argmax_param->set_out_max_val(true);
   ArgMaxLayer<TypeParam> layer(layer_param);
+#ifdef CPU_ONLY
+  Caffe::set_mode(Caffe::CPU);
+#endif
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Now, check values
@@ -107,6 +111,9 @@ TYPED_TEST(ArgMaxLayerTest, TestCPUMaxVal) {
 
 TYPED_TEST(ArgMaxLayerTest, TestCPUTopK) {
   LayerParameter layer_param;
+#ifdef CPU_ONLY
+  Caffe::set_mode(Caffe::CPU);
+#endif
   ArgMaxParameter* argmax_param = layer_param.mutable_argmax_param();
   argmax_param->set_top_k(this->top_k_);
   ArgMaxLayer<TypeParam> layer(layer_param);
@@ -136,6 +143,9 @@ TYPED_TEST(ArgMaxLayerTest, TestCPUTopK) {
 
 TYPED_TEST(ArgMaxLayerTest, TestCPUMaxValTopK) {
   LayerParameter layer_param;
+#ifdef CPU_ONLY
+  Caffe::set_mode(Caffe::CPU);
+#endif
   ArgMaxParameter* argmax_param = layer_param.mutable_argmax_param();
   argmax_param->set_out_max_val(true);
   argmax_param->set_top_k(this->top_k_);

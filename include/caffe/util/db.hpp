@@ -5,8 +5,9 @@
 
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
+#ifndef _MSC_VER
 #include "lmdb.h"
-
+#endif
 #include "caffe/common.hpp"
 #include "caffe/proto/caffe.pb.h"
 
@@ -105,6 +106,7 @@ class LevelDB : public DB {
   leveldb::DB* db_;
 };
 
+#ifndef _MSC_VER
 inline void MDB_CHECK(int mdb_status) {
   CHECK_EQ(mdb_status, MDB_SUCCESS) << mdb_strerror(mdb_status);
 }
@@ -180,7 +182,7 @@ class LMDB : public DB {
   MDB_env* mdb_env_;
   MDB_dbi mdb_dbi_;
 };
-
+#endif
 DB* GetDB(DataParameter::DB backend);
 DB* GetDB(const string& backend);
 

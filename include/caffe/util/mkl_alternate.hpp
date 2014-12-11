@@ -8,7 +8,11 @@
 #else  // If use MKL, simply include the MKL header
 
 extern "C" {
-#include <cblas.h>
+#ifdef _MSC_VER
+	#include <openblas/cblas.h>
+#else
+	#include <cblas.h>
+#endif
 }
 #include <math.h>
 

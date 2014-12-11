@@ -1,4 +1,3 @@
-#include <unistd.h>  // for usleep
 
 #include "gtest/gtest.h"
 
@@ -6,6 +5,13 @@
 #include "caffe/util/benchmark.hpp"
 
 #include "caffe/test/test_caffe_main.hpp"
+
+#ifndef _MSC_VER
+#include <unistd.h>  // for usleep
+#else
+#include <windows.h>
+#define usleep(x) Sleep((x)/1000)
+#endif
 
 namespace caffe {
 

@@ -7,6 +7,7 @@
 #include "caffe/filler.hpp"
 
 #include "caffe/test/test_caffe_main.hpp"
+#include <opencv2/core/core.hpp>
 
 namespace caffe {
 

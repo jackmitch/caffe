@@ -1,9 +1,13 @@
+
+// Copyright 2014 BVLC and contributors.
+#include "caffe/common.hpp"
+
 #include <boost/math/special_functions/next.hpp>
 #include <boost/random.hpp>
 
 #include <limits>
 
-#include "caffe/common.hpp"
+
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
 
@@ -338,6 +342,11 @@ float caffe_cpu_dot<float>(const int n, const float* x, const float* y);
 template
 double caffe_cpu_dot<double>(const int n, const double* x, const double* y);
 
+#ifdef _MSC_VER
+#  include <intrin.h>
+#  define __builtin_popcount __popcnt
+#endif
+
 template <>
 int caffe_cpu_hamming_distance<float>(const int n, const float* x,
                                   const float* y) {
@@ -352,11 +361,22 @@ int caffe_cpu_hamming_distance<float>(const int n, const float* x,
 template <>
 int caffe_cpu_hamming_distance<double>(const int n, const double* x,
                                    const double* y) {
+  #ifdef _MSC_VER
+  // 64 bit popcount isn't available on 32-bit windows so split it into
+  // two, so 64bit and 32bit work
+  int dist = 0;
+  for (int i = 0; i < n; ++i) {
+    uint64_t val = static_cast<uint64_t>(x[i]) ^ static_cast<uint64_t>(y[i]);
+    dist += __builtin_popcount(val);
+    dist += __builtin_popcount(val>>sizeof(uint32_t));
+  }
+#else
   int dist = 0;
   for (int i = 0; i < n; ++i) {
     dist += __builtin_popcountl(static_cast<uint64_t>(x[i]) ^
                                 static_cast<uint64_t>(y[i]));
   }
+#endif
   return dist;
 }
 
