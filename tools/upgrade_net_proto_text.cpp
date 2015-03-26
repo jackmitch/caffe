@@ -11,11 +11,6 @@
 #include "caffe/util/io.hpp"
 #include "caffe/util/upgrade_proto.hpp"
 
-namespace caffe {
-	extern void NetParameterToPrettyPrint(const NetParameter& param, NetParameterPrettyPrint* pretty_param);
-}
-
-#pragma
 using std::ofstream;
 
 using namespace caffe;  // NOLINT(build/namespaces)
