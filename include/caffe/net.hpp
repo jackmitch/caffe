@@ -75,6 +75,14 @@ class Net {
   void BackwardTo(int end);
 
   /**
+   * The network deconv works similarly to backward and also takes no input and output.
+   */
+  void Deconv();
+  void DeconvFromTo(int start, int end);
+  void DeconvFrom(int start);
+  void DeconvTo(int end);
+
+  /**
    * @brief Reshape all layers from bottom to top.
    *
    * This is useful to propagate changes to layer sizes without running
@@ -245,6 +253,8 @@ class Net {
   void ForwardDebugInfo(const int layer_id);
   /// @brief Helper for displaying debug info in Backward.
   void BackwardDebugInfo(const int layer_id);
+  /// @brief Helper for displaying debug info in Deconv.
+  void DeconvDebugInfo(const int layer_id);
   /// @brief Helper for displaying debug info in Update.
   void UpdateDebugInfo(const int param_id);
 
