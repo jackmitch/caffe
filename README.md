@@ -205,7 +205,7 @@ Now, you should be able to build `.\windows\Caffe.sln`
     wliu@cs.unc.edu
 
 # Deep Metric Learning via Lifted Structured Feature Embedding
-This repository is an extension of [Caffe](https://github.com/bvlc/caffe) for the paper "Deep Metric Learning via Lifted Structured Feature Embedding" (CVPR16).
+This repository is an extension of [Caffe](https://github.com/bvlc/caffe) for the paper "Deep Metric Learning via Lifted Structured Feature Embedding" (CVPR16). Also, this is a Github submodule for the main repository at [Deep-Metric-Learning-CVPR16](https://github.com/rksltnl/Deep-Metric-Learning-CVPR16). 
 
 ## Citing this work
 If you find this work useful in your research, please consider citing:
