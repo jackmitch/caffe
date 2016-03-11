@@ -201,5 +201,25 @@ After you have built solution with Matlab support, in order to use it you have t
 Now, you should be able to build `.\windows\Caffe.sln`
 
 ## Further Details
+    Wei Liu
+    wliu@cs.unc.edu
 
+# Deep Metric Learning via Lifted Structured Feature Embedding
 
+## Citing this work
+If you find this work useful in your research, please consider citing:
+
+    @inproceedings{songCVPR16,
+        Author = {Hyun Oh Song and Yu Xiang and Stefanie Jegelka and Silvio Savarese},
+        Title = {Deep Metric Learning via Lifted Structured Feature Embedding},
+        Booktitle = {CVPR},
+        Year = {2016}
+    }
+
+## Download prerequsites
+Install prerequsites for `Caffe` (see: [Caffe installation instructions](http://caffe.berkeleyvision.org/installation.html))
+
+## 
+
+## Licence
+MIT Licence
