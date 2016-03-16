@@ -183,7 +183,15 @@ class Layer {
    * (Deconv_cpu or Deconv_gpu) to compute the bottom blob diffs given the
    * top blob diffs.
    *
-   * Your layer should implement Deconv_cpu and (optionally) Deconv_gpu.
+   * Your layer should implement Deconv_cpu and Deconv_gpu.
+   * 
+   * Note: By default, Deconv_gpu will just call Backward_gpu, and
+   * Deconv_cpu will just call Backward_cpu. In many cases this
+   * behavior is desired, e.g. for convolution or innerproduct or
+   * pooling layers. If this is not the desired behavior, override
+   * Deconv_cpu AND Deconv_gpu. If only one of Deconv_{cpu,gpu} is
+   * overridden, the other will still defer to Backward_{cpu,gpu},
+   * which will lead to confusing and inconsistent behavior!
    */
   inline void Deconv(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down,
@@ -382,7 +390,8 @@ class Layer {
   virtual void Deconv_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down,
       const vector<Blob<Dtype>*>& bottom) {
-        NOT_IMPLEMENTED;
+    // LOG(WARNING) << "Explicit Deconv_cpu not implemented for " << type() << " yet; falling back to backward_cpu.";
+    Backward_cpu(top, propagate_down, bottom);
   }
   /**
    * @brief Using the GPU device, compute the deconv (Zeiler et al, 2013) for the bottom blobs.
@@ -391,8 +400,8 @@ class Layer {
   virtual void Deconv_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down,
       const vector<Blob<Dtype>*>& bottom) {
-    // LOG(WARNING) << "Using CPU code as backup.";
-    Deconv_cpu(top, propagate_down, bottom);
+    // LOG(WARNING) << "Explicit Deconv_gpu not implemented for " << type() << " yet; falling back to backward_gpu.";
+    Backward_gpu(top, propagate_down, bottom);
   }
 
   /**
