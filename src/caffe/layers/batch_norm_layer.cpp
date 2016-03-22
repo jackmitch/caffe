@@ -155,6 +155,8 @@ void BatchNormLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   caffe_cpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, num, channels_, 1, 1,
       batch_sum_multiplier_.cpu_data(), variance_.cpu_data(), 0.,
       num_by_chans_.mutable_cpu_data());
+
+#ifndef FEED_FORWARD_ONLY
   caffe_cpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, channels_ * num,
       spatial_dim, 1, 1., num_by_chans_.cpu_data(),
       spatial_sum_multiplier_.cpu_data(), 0., temp_.mutable_cpu_data());
@@ -163,12 +165,14 @@ void BatchNormLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   //                 might clobber the data.  Can we skip this if they won't?
   caffe_copy(x_norm_.count(), top_data,
       x_norm_.mutable_cpu_data());
+#endif
 }
 
 template <typename Dtype>
 void BatchNormLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
+#ifndef FEED_FORWARD_ONLY
   const Dtype* top_diff;
   if (bottom[0] != top[0]) {
     top_diff = top[0]->cpu_diff();
@@ -239,6 +243,9 @@ void BatchNormLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   // note: temp_ still contains sqrt(var(X)+eps), computed during the forward
   // pass.
   caffe_div(temp_.count(), bottom_diff, temp_.cpu_data(), bottom_diff);
+#else
+  CHECK_EQ(0, 1);
+#endif
 }
 
 
