@@ -58,6 +58,19 @@ void GlobalInit(int* pargc, char*** pargv) {
 #endif
 }
 
+#ifdef USE_NNPACK
+  template<>
+  bool Caffe::nnpack_supported<double>() {
+    return false;
+  }
+
+  template<>
+  bool Caffe::nnpack_supported<float>() {
+    static enum nnp_status nnpack_status = nnp_initialize();
+    return nnpack_status == nnp_status_success;
+  }
+#endif
+
 #ifdef CPU_ONLY  // CPU-only Caffe.
 
 Caffe::Caffe()
