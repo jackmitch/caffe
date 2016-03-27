@@ -18,16 +18,6 @@
 #include "caffe/util/insert_splits.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/upgrade_proto.hpp"
-#include "caffe/net_memory_optimiser.hpp"
-#ifdef FEED_FORWARD_ONLY
-#include "boost/thread.hpp"
-#include "caffe/shared_conv_blobs.hpp"
-#include "caffe/layers/base_conv_layer.hpp"
-#ifdef USE_CUDNN
-#include "caffe/shared_cudnn_data.hpp"
-#include "caffe/layers/cudnn_conv_layer.hpp"
-#endif
-#endif
 
 #include "caffe/test/test_caffe_main.hpp"
 
@@ -40,31 +30,16 @@ Net<Dtype>::Net(const NetParameter& param, const Net* root_net)
 }
 
 template <typename Dtype>
-Net<Dtype>::~Net() {
-
-}
-
-template <typename Dtype>
-Net<Dtype>::Net(const string& param_file, Phase phase,
-    const int level, const vector<string>* stages,
-    const Net* root_net)
+Net<Dtype>::Net(const string& param_file, Phase phase, const Net* root_net)
     : root_net_(root_net) {
   NetParameter param;
   ReadNetParamsFromTextFileOrDie(param_file, &param);
-  // Set phase, stages and level
   param.mutable_state()->set_phase(phase);
-  if (stages != NULL) {
-    for (int i = 0; i < stages->size(); ++i) {
-      param.mutable_state()->add_stage((*stages)[i]);
-    }
-  }
-  param.mutable_state()->set_level(level);
   Init(param);
 }
 
 template <typename Dtype>
 void Net<Dtype>::Init(const NetParameter& in_param) {
-
   CHECK(Caffe::root_solver() || root_net_)
       << "root_net_ needs to be set for all non-root solvers";
   // Set phase from the state.
@@ -300,32 +275,6 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   ShareWeights();
   debug_info_ = param.debug_info();
   LOG_IF(INFO, Caffe::root_solver()) << "Network initialization done.";
-
-#ifdef FEED_FORWARD_ONLY
-#ifdef USE_CUDNN
-  cuDnnWorkspace_.reset(new SharedCuDNNData<Dtype>());
-  // set on all cudnn_conv layers
-  for (int i = 0; i < layers_.size(); i++) {
-    CuDNNConvolutionLayer<Dtype> *cl = dynamic_cast<CuDNNConvolutionLayer<Dtype>*>(layers_[i].get());
-    if(cl) {
-      cl->setSharedWorkspace(cuDnnWorkspace_);
-    }
-  }
-#endif
-  sharedConvBlobs_.reset(new SharedConvBlobs<Dtype>());
-  for (int i = 0; i < layers_.size(); i++) {
-    BaseConvolutionLayer<Dtype> *cl = dynamic_cast<BaseConvolutionLayer<Dtype>*>(layers_[i].get());
-    if (cl) {
-      cl->setSharedBlobs(sharedConvBlobs_);
-    }
-  }
-  // optimize memory
-  if (in_param.has_memory_optimisation_params())
-  {
-    NetMemoryOptimiser<Dtype> optimiser(*this, in_param.memory_optimisation_params());
-    optimiser.optimise();
-  }
-#endif
 }
 
 template <typename Dtype>
@@ -954,14 +903,14 @@ void Net<Dtype>::CopyTrainedLayersFromHDF5(const string trained_filename) {
 }
 
 template <typename Dtype>
-void Net<Dtype>::ToProto(NetParameter* param, bool write_diff, bool write_blobs) const {
+void Net<Dtype>::ToProto(NetParameter* param, bool write_diff) const {
   param->Clear();
   param->set_name(name_);
   // Add bottom and top
   DLOG(INFO) << "Serializing " << layers_.size() << " layers";
   for (int i = 0; i < layers_.size(); ++i) {
     LayerParameter* layer_param = param->add_layer();
-    layers_[i]->ToProto(layer_param, write_diff, write_blobs);
+    layers_[i]->ToProto(layer_param, write_diff);
   }
 }
 

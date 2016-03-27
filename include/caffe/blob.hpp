@@ -228,7 +228,7 @@ class Blob {
   Dtype* mutable_gpu_diff();
   void Update();
   void FromProto(const BlobProto& proto, bool reshape = true);
-  void ToProto(BlobProto* proto, bool write_diff = false, bool write_data = true) const;
+  void ToProto(BlobProto* proto, bool write_diff = false) const;
 
   /// @brief Compute the sum of absolute values (L1 norm) of the data.
   Dtype asum_data() const;
@@ -253,8 +253,6 @@ class Blob {
    * shared_ptr calls its destructor when reset with the "=" operator.
    */
   void ShareData(const Blob& other);
-  void ShareData(shared_ptr<SyncedMemory>& storage);
-
   /**
    * @brief Set the diff_ shared_ptr to point to the SyncedMemory holding the
    *        diff_ of Blob other -- useful in Layer%s which simply perform a copy
@@ -264,7 +262,6 @@ class Blob {
    * shared_ptr calls its destructor when reset with the "=" operator.
    */
   void ShareDiff(const Blob& other);
-  void ShareDiff(shared_ptr<SyncedMemory>& storage);
 
   bool ShapeEquals(const BlobProto& other);
 

@@ -28,7 +28,6 @@ class CuDNNSoftmaxLayer : public SoftmaxLayer<Dtype> {
   virtual ~CuDNNSoftmaxLayer();
 
  protected:
-  virtual void CleanUp();
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,

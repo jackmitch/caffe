@@ -9,10 +9,6 @@
 
 #include "caffe/layers/conv_layer.hpp"
 
-#ifdef FEED_FORWARD_ONLY
-#include "caffe/shared_cudnn_data.hpp"
-#endif
-
 namespace caffe {
 
 #ifdef USE_CUDNN
@@ -41,12 +37,7 @@ class CuDNNConvolutionLayer : public ConvolutionLayer<Dtype> {
       const vector<Blob<Dtype>*>& top);
   virtual ~CuDNNConvolutionLayer();
 
-#ifdef FEED_FORWARD_ONLY
-  void setSharedWorkspace(shared_ptr<SharedCuDNNData<Dtype> > workspace);
-#endif
-
  protected:
-  virtual void  CleanUp();
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
@@ -70,15 +61,9 @@ class CuDNNConvolutionLayer : public ConvolutionLayer<Dtype> {
   size_t *workspace_fwd_sizes_;
   size_t *workspace_bwd_data_sizes_;
   size_t *workspace_bwd_filter_sizes_;
-
   size_t workspaceSizeInBytes;  // size of underlying storage
-  void *workspaceData;          // underlying storage
-  void **workspace;             // aliases into workspaceData
-
-#ifdef FEED_FORWARD_ONLY
-  shared_ptr<SharedCuDNNData<Dtype> > shared_workspace_;
-#endif
-
+  void *workspaceData;  // underlying storage
+  void **workspace;  // aliases into workspaceData
 };
 #endif
 

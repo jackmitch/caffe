@@ -24,7 +24,6 @@ class CuDNNLRNLayer : public LRNLayer<Dtype> {
   virtual ~CuDNNLRNLayer();
 
  protected:
-  virtual void CleanUp();
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,

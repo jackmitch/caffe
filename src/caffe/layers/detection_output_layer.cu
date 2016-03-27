@@ -24,54 +24,50 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
   const int num = bottom[0]->num();
 
   // Decode predictions.
-  Dtype* bbox_data = bbox_preds_.mutable_gpu_data();
-  const int loc_count = bbox_preds_.count();
-  const bool clip_bbox = false;
+  Blob<Dtype> bbox_preds;
+  bbox_preds.ReshapeLike(*(bottom[0]));
+  Dtype* bbox_data = bbox_preds.mutable_gpu_data();
+  const int loc_count = bbox_preds.count();
   DecodeBBoxesGPU<Dtype>(loc_count, loc_data, prior_data, code_type_,
       variance_encoded_in_target_, num_priors_, share_location_,
-      num_loc_classes_, background_label_id_, clip_bbox, bbox_data);
-  // Retrieve all decoded location predictions.
-  const Dtype* bbox_cpu_data;
+      num_loc_classes_, background_label_id_, bbox_data);
   if (!share_location_) {
-    Dtype* bbox_permute_data = bbox_permute_.mutable_gpu_data();
+    Blob<Dtype> bbox_permute;
+    bbox_permute.ReshapeLike(*(bottom[0]));
+    Dtype* bbox_permute_data = bbox_permute.mutable_gpu_data();
     PermuteDataGPU<Dtype>(loc_count, bbox_data, num_loc_classes_, num_priors_,
         4, bbox_permute_data);
-    bbox_cpu_data = bbox_permute_.cpu_data();
-  } else {
-    bbox_cpu_data = bbox_preds_.cpu_data();
+    caffe_copy(loc_count, bbox_permute_data, bbox_data);
   }
 
   // Retrieve all confidences.
-  Dtype* conf_permute_data = conf_permute_.mutable_gpu_data();
-  PermuteDataGPU<Dtype>(bottom[1]->count(), bottom[1]->gpu_data(),
+  const Dtype* conf_cpu_data;
+  Blob<Dtype> conf_permute;
+  conf_permute.ReshapeLike(*(bottom[1]));
+  Dtype* conf_permute_data = conf_permute.mutable_gpu_data();
+  PermuteDataGPU<Dtype>(conf_permute.count(), bottom[1]->gpu_data(),
       num_classes_, num_priors_, 1, conf_permute_data);
-  const Dtype* conf_cpu_data = conf_permute_.cpu_data();
+  conf_cpu_data = conf_permute.cpu_data();
 
   int num_kept = 0;
   vector<map<int, vector<int> > > all_indices;
   for (int i = 0; i < num; ++i) {
     map<int, vector<int> > indices;
     int num_det = 0;
-    const int conf_idx = i * num_classes_ * num_priors_;
-    int bbox_idx;
-    if (share_location_) {
-      bbox_idx = i * num_priors_ * 4;
-    } else {
-      bbox_idx = conf_idx * 4;
-    }
+    const int start_idx = i * num_classes_ * num_priors_;
     for (int c = 0; c < num_classes_; ++c) {
-      if (c == background_label_id_) {
-        // Ignore background class.
-        continue;
+      if (c != background_label_id_) {
+        ApplyNMSGPU(bbox_data, conf_cpu_data + start_idx + c * num_priors_,
+            num_priors_, confidence_threshold_, top_k_, nms_threshold_,
+            &(indices[c]));
+        num_det += indices[c].size();
       }
-      const Dtype* cur_conf_data = conf_cpu_data + conf_idx + c * num_priors_;
-      const Dtype* cur_bbox_data = bbox_cpu_data + bbox_idx;
       if (!share_location_) {
-        cur_bbox_data += c * num_priors_ * 4;
+        bbox_data += num_priors_ * 4;
       }
-      ApplyNMSFast(cur_bbox_data, cur_conf_data, num_priors_,
-          confidence_threshold_, nms_threshold_, eta_, top_k_, &(indices[c]));
-      num_det += indices[c].size();
+    }
+    if (share_location_) {
+      bbox_data += num_priors_ * 4;
     }
     if (keep_top_k_ > -1 && num_det > keep_top_k_) {
       vector<pair<float, pair<int, int> > > score_index_pairs;
@@ -81,14 +77,14 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
         const vector<int>& label_indices = it->second;
         for (int j = 0; j < label_indices.size(); ++j) {
           int idx = label_indices[j];
-          float score = conf_cpu_data[conf_idx + label * num_priors_ + idx];
+          float score = conf_cpu_data[start_idx + label * num_priors_ + idx];
           score_index_pairs.push_back(std::make_pair(
                   score, std::make_pair(label, idx)));
         }
       }
       // Keep top k results per image.
       std::sort(score_index_pairs.begin(), score_index_pairs.end(),
-                SortScorePairDescend<float, pair<int, int> >);
+                SortScorePairDescend<pair<int, int> >);
       score_index_pairs.resize(keep_top_k_);
       // Store the new indices.
       map<int, vector<int> > new_indices;
@@ -108,71 +104,63 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
   vector<int> top_shape(2, 1);
   top_shape.push_back(num_kept);
   top_shape.push_back(7);
-  Dtype* top_data;
+  top[0]->Reshape(top_shape);
+
   if (num_kept == 0) {
-    LOG(INFO) << "Couldn't find any detections";
-    top_shape[2] = num;
-    top[0]->Reshape(top_shape);
-    top_data = top[0]->mutable_cpu_data();
-    caffe_set<Dtype>(top[0]->count(), -1, top_data);
-    // Generate fake results per image.
-    for (int i = 0; i < num; ++i) {
-      top_data[0] = i;
-      top_data += 7;
-    }
-  } else {
-    top[0]->Reshape(top_shape);
-    top_data = top[0]->mutable_cpu_data();
+    //LOG(INFO) << "Couldn't find any detections";
+    return;
   }
 
-  int count = 0;
+  Dtype* top_data = top[0]->mutable_cpu_data();
+  const Dtype* bbox_cpu_data = bbox_preds.cpu_data();
+
   boost::filesystem::path output_directory(output_directory_);
   for (int i = 0; i < num; ++i) {
-    const int conf_idx = i * num_classes_ * num_priors_;
-    int bbox_idx;
-    if (share_location_) {
-      bbox_idx = i * num_priors_ * 4;
-    } else {
-      bbox_idx = conf_idx * 4;
-    }
-    for (map<int, vector<int> >::iterator it = all_indices[i].begin();
-         it != all_indices[i].end(); ++it) {
-      int label = it->first;
-      vector<int>& indices = it->second;
-      if (need_save_) {
-        CHECK(label_to_name_.find(label) != label_to_name_.end())
-          << "Cannot find label: " << label << " in the label map.";
-        CHECK_LT(name_count_, names_.size());
-      }
-      const Dtype* cur_conf_data =
-        conf_cpu_data + conf_idx + label * num_priors_;
-      const Dtype* cur_bbox_data = bbox_cpu_data + bbox_idx;
-      if (!share_location_) {
-        cur_bbox_data += label * num_priors_ * 4;
-      }
-      for (int j = 0; j < indices.size(); ++j) {
-        int idx = indices[j];
-        top_data[count * 7] = i;
-        top_data[count * 7 + 1] = label;
-        top_data[count * 7 + 2] = cur_conf_data[idx];
-        for (int k = 0; k < 4; ++k) {
-          top_data[count * 7 + 3 + k] = cur_bbox_data[idx * 4 + k];
+    int start_idx = i * num_classes_ * num_priors_;
+    for (int c = 0; c < num_classes_; ++c) {
+      if (all_indices[i].find(c) == all_indices[i].end()) {
+        if (!share_location_) {
+          bbox_cpu_data += num_priors_ * 4;
         }
-        if (need_save_) {
-          // Generate output bbox.
-          NormalizedBBox bbox;
-          bbox.set_xmin(top_data[count * 7 + 3]);
-          bbox.set_ymin(top_data[count * 7 + 4]);
-          bbox.set_xmax(top_data[count * 7 + 5]);
-          bbox.set_ymax(top_data[count * 7 + 6]);
-          NormalizedBBox out_bbox;
-          OutputBBox(bbox, sizes_[name_count_], has_resize_, resize_param_,
-                     &out_bbox);
-          float score = top_data[count * 7 + 2];
-          float xmin = out_bbox.xmin();
-          float ymin = out_bbox.ymin();
-          float xmax = out_bbox.xmax();
-          float ymax = out_bbox.ymax();
+        continue;
+      }
+      vector<int>& indices = all_indices[i].find(c)->second;
+      // Retrieve detection data.
+      bool clip_bbox = true;
+      for (int j = 0; j < indices.size(); ++j) {
+        top_data[j * 7] = i;
+        top_data[j * 7 + 1] = c;
+        int idx = indices[j];
+        top_data[j * 7 + 2] = conf_cpu_data[start_idx + c * num_priors_ + idx];
+        if (clip_bbox) {
+          for (int k = 0; k < 4; ++k) {
+            top_data[j * 7 + 3 + k] = std::max(
+                std::min(bbox_cpu_data[idx * 4 + k], Dtype(1)), Dtype(0));
+          }
+        } else {
+          for (int k = 0; k < 4; ++k) {
+            top_data[j * 7 + 3 + k] = bbox_cpu_data[idx * 4 + k];
+          }
+        }
+      }
+      if (!share_location_) {
+        bbox_cpu_data += num_priors_ * 4;
+      }
+      if (indices.size() == 0) {
+        continue;
+      }
+      if (need_save_) {
+        CHECK(label_to_name_.find(c) != label_to_name_.end())
+            << "Cannot find label: " << c << " in the label map.";
+        CHECK_LT(name_count_, names_.size());
+        int height = sizes_[name_count_].first;
+        int width = sizes_[name_count_].second;
+        for (int j = 0; j < indices.size(); ++j) {
+          float score = top_data[j * 7 + 2];
+          float xmin = top_data[j * 7 + 3] * width;
+          float ymin = top_data[j * 7 + 4] * height;
+          float xmax = top_data[j * 7 + 5] * width;
+          float ymax = top_data[j * 7 + 6] * height;
           ptree pt_xmin, pt_ymin, pt_width, pt_height;
           pt_xmin.put<float>("", round(xmin * 100) / 100.);
           pt_ymin.put<float>("", round(ymin * 100) / 100.);
@@ -188,17 +176,20 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
           ptree cur_det;
           cur_det.put("image_id", names_[name_count_]);
           if (output_format_ == "ILSVRC") {
-            cur_det.put<int>("category_id", label);
+            cur_det.put<int>("category_id", c);
           } else {
-            cur_det.put("category_id", label_to_name_[label].c_str());
+            cur_det.put("category_id", label_to_name_[c].c_str());
           }
           cur_det.add_child("bbox", cur_bbox);
           cur_det.put<float>("score", score);
 
           detections_.push_back(std::make_pair("", cur_det));
         }
-        ++count;
       }
+      top_data += indices.size() * 7;
+    }
+    if (share_location_) {
+      bbox_cpu_data += num_priors_ * 4;
     }
     if (need_save_) {
       ++name_count_;
@@ -284,7 +275,6 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
           }
         }
         name_count_ = 0;
-        detections_.clear();
       }
     }
   }
@@ -294,7 +284,7 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
     this->data_transformer_->TransformInv(bottom[3], &cv_imgs);
     vector<cv::Scalar> colors = GetColors(label_to_display_name_.size());
     VisualizeBBox(cv_imgs, top[0], visualize_threshold_, colors,
-        label_to_display_name_, save_file_);
+        label_to_display_name_);
 #endif  // USE_OPENCV
   }
 }

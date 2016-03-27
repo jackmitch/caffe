@@ -34,7 +34,7 @@ class MultiBoxLossLayer : public LossLayer<Dtype> {
 
   virtual inline const char* type() const { return "MultiBoxLoss"; }
   // bottom[0] stores the location predictions.
-  // bottom[1] stores the confidence predictions.
+  // bottom[0] stores the confidence predictions.
   // bottom[2] stores the prior bounding boxes.
   // bottom[3] stores the ground truth bounding boxes.
   virtual inline int ExactNumBottomBlobs() const { return 4; }
@@ -75,7 +75,6 @@ class MultiBoxLossLayer : public LossLayer<Dtype> {
   // confidence loss.
   Blob<Dtype> conf_loss_;
 
-  MultiBoxLossParameter multibox_loss_param_;
   int num_classes_;
   bool share_location_;
   MatchType match_type_;
@@ -89,9 +88,7 @@ class MultiBoxLossLayer : public LossLayer<Dtype> {
   CodeType code_type_;
   bool encode_variance_in_target_;
   bool map_object_to_agnostic_;
-  bool ignore_cross_boundary_bbox_;
-  bool bp_inside_;
-  MiningType mining_type_;
+  int min_num_negs_;
 
   int loc_classes_;
   int num_gt_;

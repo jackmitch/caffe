@@ -1,50 +1,44 @@
-# Pimloc: Our work and SSD and normal caffe
-
 # SSD: Single Shot MultiBox Detector
 
-[![Build Status](https://travis-ci.org/weiliu89/caffe.svg?branch=ssd)](https://travis-ci.org/weiliu89/caffe)
-[![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
-
-By [Wei Liu](http://www.cs.unc.edu/~wliu/), [Dragomir Anguelov](https://www.linkedin.com/in/dragomiranguelov), [Dumitru Erhan](http://research.google.com/pubs/DumitruErhan.html), [Christian Szegedy](http://research.google.com/pubs/ChristianSzegedy.html), [Scott Reed](http://www-personal.umich.edu/~reedscot/), [Cheng-Yang Fu](http://www.cs.unc.edu/~cyfu/), [Alexander C. Berg](http://acberg.com).
+By [Wei Liu](http://www.cs.unc.edu/~wliu/), [Dragomir Anguelov](http://research.google.com/pubs/DragomirAnguelov.html), [Dumitru Erhan](http://research.google.com/pubs/DumitruErhan.html), [Christian Szegedy](http://research.google.com/pubs/ChristianSzegedy.html), [Scott Reed](http://www-personal.umich.edu/~reedscot/), Cheng-Yang Fu, [Alexander C. Berg](http://acberg.com).
 
 ### Introduction
 
-SSD is an unified framework for object detection with a single network. You can use the code to train/evaluate a network for object detection task. For more details, please refer to our [arXiv paper](http://arxiv.org/abs/1512.02325) and our [slide](http://www.cs.unc.edu/~wliu/papers/ssd_eccv2016_slide.pdf).
+SSD is an unified framework for object detection with a single network. You can use the code to train/evaluate a network for object detection task. For more details, please refer to our [arXiv paper](http://arxiv.org/abs/1512.02325).
 
 <p align="center">
 <img src="http://www.cs.unc.edu/~wliu/papers/ssd.png" alt="SSD Framework" width="600px">
 </p>
 
-| System | VOC2007 test *mAP* | **FPS** (Titan X) | Number of Boxes | Input resolution
-|:-------|:-----:|:-------:|:-------:|:-------:|
-| [Faster R-CNN (VGG16)](https://github.com/ShaoqingRen/faster_rcnn) | 73.2 | 7 | ~6000 | ~1000 x 600 |
-| [YOLO (customized)](http://pjreddie.com/darknet/yolo/) | 63.4 | 45 | 98 | 448 x 448 |
-| SSD300* (VGG16) | 77.2 | 46 | 8732 | 300 x 300 |
-| SSD512* (VGG16) | **79.8** | 19 | 24564 | 512 x 512 |
+<center>
 
+| System | VOC2007 test *mAP* | **FPS** (Titan X) | Number of Boxes |
+|:-------|:-----:|:-------:|:-------:|
+| [Faster R-CNN (VGG16)](https://github.com/ShaoqingRen/faster_rcnn) | 73.2 | 7 | 300 |
+| [Faster R-CNN (ZF)](https://github.com/ShaoqingRen/faster_rcnn) | 62.1 | 17 | 300 |
+| [YOLO](http://pjreddie.com/darknet/yolo/) | 63.4 | 45 | 98 |
+| [Fast YOLO](http://pjreddie.com/darknet/yolo/) | 52.7 | 155 | 98 |
+| SSD300 (VGG16) | 72.1 | 58 | 7308 |
+| SSD500 (VGG16) | **75.1** | 23 | 20097 |
 
-<p align="left">
-<img src="http://www.cs.unc.edu/~wliu/papers/ssd_results.png" alt="SSD results on multiple datasets" width="800px">
-</p>
-
-_Note: SSD300* and SSD512* are the latest models. Current code should reproduce these results._
+</center>
 
 ### Citing SSD
 
 Please cite SSD in your publications if it helps your research:
 
-    @inproceedings{liu2016ssd,
-      title = {{SSD}: Single Shot MultiBox Detector},
-      author = {Liu, Wei and Anguelov, Dragomir and Erhan, Dumitru and Szegedy, Christian and Reed, Scott and Fu, Cheng-Yang and Berg, Alexander C.},
-      booktitle = {ECCV},
-      year = {2016}
+    @article{liu15ssd,
+      Title = {{SSD}: Single Shot MultiBox Detector},
+      Author = {Liu, Wei and Anguelov, Dragomir and Erhan, Dumitru and Szegedy, Christian and Reed, Scott and Fu, Cheng-Yang and Berg, Alexander C.},
+      Journal = {arXiv preprint arXiv:1512.02325},
+      Year = {2015}
     }
 
 ### Contents
 1. [Installation](#installation)
 2. [Preparation](#preparation)
 3. [Train/Eval](#traineval)
-4. [Models](#models)
+4. [Contact](#contact)
 
 ### Installation
 1. Get the code. We will call the directory that you cloned Caffe into `$CAFFE_ROOT`
@@ -62,8 +56,12 @@ Please cite SSD in your publications if it helps your research:
   # Make sure to include $CAFFE_ROOT/python to your PYTHONPATH.
   make py
   make test -j8
-  # (Optional)
   make runtest -j8
+  # If you have multiple GPUs installed in your machine, make runtest might fail. If so, try following:
+  export CUDA_VISIBLE_DEVICES=0; make runtest -j8
+  # If you have error: "Check failed: error == cudaSuccess (10 vs. 0)  invalid device ordinal",
+  # first make sure you have the specified GPUs, or try following if you have multiple GPUs:
+  unset CUDA_VISIBLE_DEVICES
   ```
 
 ### Preparation
@@ -104,7 +102,7 @@ Please cite SSD in your publications if it helps your research:
   #   - $CAFFE_ROOT/jobs/VGGNet/VOC0712/SSD_300x300/
   # and save temporary evaluation results in:
   #   - $HOME/data/VOCdevkit/results/VOC2007/SSD_300x300/
-  # It should reach 77.* mAP at 120k iterations.
+  # It should reach 72.* mAP at 60k iterations.
   python examples/ssd/ssd_pascal.py
   ```
   If you don't have time to train your model, you can download a pre-trained model at [here](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712_SSD_300x300.tar.gz).
@@ -122,85 +120,14 @@ Please cite SSD in your publications if it helps your research:
   ```
   [Here](https://drive.google.com/file/d/0BzKzrI_SkD1_R09NcjM1eElLcWc/view) is a demo video of running a SSD500 model trained on [MSCOCO](http://mscoco.org) dataset.
 
-4. Check out [`examples/ssd_detect.ipynb`](https://github.com/weiliu89/caffe/blob/ssd/examples/ssd_detect.ipynb) or [`examples/ssd/ssd_detect.cpp`](https://github.com/weiliu89/caffe/blob/ssd/examples/ssd/ssd_detect.cpp) on how to detect objects using a SSD model. Check out [`examples/ssd/plot_detections.py`](https://github.com/weiliu89/caffe/blob/ssd/examples/ssd/plot_detections.py) on how to plot detection results output by ssd_detect.cpp.
+4. Check out `examples/ssd_detect.ipynb` on how to detect objects using a SSD model.
 
-5. To train on other dataset, please refer to data/OTHERDATASET for more details. We currently add support for COCO and ILSVRC2016. We recommend using [`examples/ssd.ipynb`](https://github.com/weiliu89/caffe/blob/ssd/examples/ssd_detect.ipynb) to check whether the new dataset is prepared correctly.
+5. To train on other dataset, please refer to data/OTHERDATASET for more details.
+We currently add support for MSCOCO.
 
-### Models
-We have provided the latest models that are trained from different datasets. To help reproduce the results in [Table 6](https://arxiv.org/pdf/1512.02325v4.pdf), most models contain a pretrained `.caffemodel` file, many `.prototxt` files, and python scripts.
+### Contact
+Please direct all comments and report all bugs to:
 
-1. PASCAL VOC models:
-   * 07+12: [SSD300*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712_SSD_300x300.tar.gz), [SSD512*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712_SSD_512x512.tar.gz)
-   * 07++12: [SSD300*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712Plus_SSD_300x300.tar.gz), [SSD512*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712Plus_SSD_512x512.tar.gz)
-   * COCO<sup>[1]</sup>: [SSD300*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712_SSD_300x300_coco.tar.gz), [SSD512*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712_SSD_512x512_coco.tar.gz)
-   * 07+12+COCO: [SSD300*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712_SSD_300x300_ft.tar.gz), [SSD512*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712_SSD_512x512_ft.tar.gz)
-   * 07++12+COCO: [SSD300*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712Plus_SSD_300x300_ft.tar.gz), [SSD512*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712Plus_SSD_512x512_ft.tar.gz)
-
-2. COCO models:
-   * trainval35k: [SSD300*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_coco_SSD_300x300.tar.gz), [SSD512*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_coco_SSD_512x512.tar.gz)
-
-3. ILSVRC models:
-   * trainval1: [SSD300*](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_ILSVRC2016_SSD_300x300.tar.gz), [SSD500](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_ilsvrc15_SSD_500x500.tar.gz)
-
-<sup>[1]</sup>We use [`examples/convert_model.ipynb`](https://github.com/weiliu89/caffe/blob/ssd/examples/convert_model.ipynb) to extract a VOC model from a pretrained COCO model.
-
-[![Travis Build Status](https://api.travis-ci.org/BVLC/caffe.svg?branch=windows)](https://travis-ci.org/BVLC/caffe) Travis (Linux build)
-
-[![Build status](https://ci.appveyor.com/api/projects/status/128eg95svel2a2xs?svg=true)]
-(https://ci.appveyor.com/project/pavlejosipovic/caffe-v45qi) AppVeyor (Windows build)
-
-## Windows Setup
-**Requirements**: Visual Studio 2013
-
-### Pre-Build Steps
-Copy `.\windows\CommonSettings.props.example` to `.\windows\CommonSettings.props`
-
-By defaults Windows build requires `CUDA` and `cuDNN` libraries.
-Both can be disabled by adjusting build variables in `.\windows\CommonSettings.props`.
-Python support is disabled by default, but can be enabled via `.\windows\CommonSettings.props` as well.
-3rd party dependencies required by Caffe are automatically resolved via NuGet.
-
-### CUDA
-Download `CUDA Toolkit 7.5` [from nVidia website](https://developer.nvidia.com/cuda-toolkit).
-If you don't have CUDA installed, you can experiment with CPU_ONLY build.
-In `.\windows\CommonSettings.props` set `CpuOnlyBuild` to `true` and set `UseCuDNN` to `false`.
-
-### cuDNN
-Download `cuDNN v3` or `cuDNN v4` [from nVidia website](https://developer.nvidia.com/cudnn).
-Unpack downloaded zip to %CUDA_PATH% (environment variable set by CUDA installer).
-Alternatively, you can unpack zip to any location and set `CuDnnPath` to point to this location in `.\windows\CommonSettings.props`.
-`CuDnnPath` defined in `.\windows\CommonSettings.props`.
-Also, you can disable cuDNN by setting `UseCuDNN` to `false` in the property file.
-
-### Python
-To build Caffe Python wrapper set `PythonSupport` to `true` in `.\windows\CommonSettings.props`.
-Download Miniconda 2.7 64-bit Windows installer [from Miniconda website] (http://conda.pydata.org/miniconda.html).
-Install for all users and add Python to PATH (through installer).
-
-Run the following commands from elevated command prompt:
-
-```
-conda install --yes numpy scipy matplotlib scikit-image pip
-pip install protobuf
-```
-
-#### Remark
-After you have built solution with Python support, in order to use it you have to either:  
-* set `PythonPath` environment variable to point to `<caffe_root>\Build\x64\Release\pycaffe`, or
-* copy folder `<caffe_root>\Build\x64\Release\pycaffe\caffe` under `<python_root>\lib\site-packages`.
-
-### Matlab
-To build Caffe Matlab wrapper set `MatlabSupport` to `true` and `MatlabDir` to the root of your Matlab installation in `.\windows\CommonSettings.props`.
-
-#### Remark
-After you have built solution with Matlab support, in order to use it you have to:
-* add the generated `matcaffe` folder to Matlab search path, and
-* add `<caffe_root>\Build\x64\Release` to your system path.
-
-### Build
-Now, you should be able to build `.\windows\Caffe.sln`
-
-## Further Details
     Wei Liu
     wliu@cs.unc.edu
 

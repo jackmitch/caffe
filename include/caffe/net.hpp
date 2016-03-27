@@ -11,7 +11,6 @@
 #include "caffe/common.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
-#include "caffe/shared_cudnn_data.hpp"
 
 namespace caffe {
 
@@ -21,21 +20,13 @@ namespace caffe {
  *
  * TODO(dox): more thorough description.
  */
-
-template <typename Dtype> class SharedCuDNNData;
-template <typename Dtype> class SharedConvBlobs;
-template <typename Dtype> class NetMemoryOptimiser;
-
 template <typename Dtype>
 class Net {
- friend class NetMemoryOptimiser<Dtype>;
-
  public:
   explicit Net(const NetParameter& param, const Net* root_net = NULL);
   explicit Net(const string& param_file, Phase phase,
-      const int level = 0, const vector<string>* stages = NULL,
       const Net* root_net = NULL);
-  virtual ~Net();
+  virtual ~Net() {}
 
   /// @brief Initialize a network with a NetParameter.
   void Init(const NetParameter& param);
@@ -132,7 +123,7 @@ class Net {
   void CopyTrainedLayersFromBinaryProto(const string trained_filename);
   void CopyTrainedLayersFromHDF5(const string trained_filename);
   /// @brief Writes the net to a proto.
-  void ToProto(NetParameter* param, bool write_diff = false, bool write_blobs = true) const;
+  void ToProto(NetParameter* param, bool write_diff = false) const;
   /// @brief Writes the net to an HDF5 file.
   void ToHDF5(const string& filename, bool write_diff = false) const;
 
@@ -326,10 +317,6 @@ class Net {
   bool debug_info_;
   /// The root net that actually holds the shared layers in data parallelism
   const Net* const root_net_;
-
-  shared_ptr<SharedCuDNNData<Dtype> > cuDnnWorkspace_;
-  shared_ptr<SharedConvBlobs<Dtype> > sharedConvBlobs_;
-
   DISABLE_COPY_AND_ASSIGN(Net);
 };
 

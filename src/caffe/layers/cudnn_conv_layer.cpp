@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "caffe/layers/cudnn_conv_layer.hpp"
-#include "caffe/shared_cudnn_data.hpp"
 
 namespace caffe {
 
@@ -15,18 +14,10 @@ namespace caffe {
 /**
  * TODO(dox) explain cuDNN interface
  */
-
 template <typename Dtype>
 void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   ConvolutionLayer<Dtype>::LayerSetUp(bottom, top);
-
-  this->using_col_buffer_ = false;
-
-  if(handles_setup_) {
-    CleanUp();
-  }
-
   // Initialize CUDA streams and cuDNN.
   stream_         = new cudaStream_t[this->group_ * CUDNN_STREAMS_PER_GROUP];
   handle_         = new cudnnHandle_t[this->group_ * CUDNN_STREAMS_PER_GROUP];
@@ -42,9 +33,6 @@ void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
   workspace_bwd_data_sizes_ = new size_t[bottom.size()];
 
   // workspace data
-#ifdef FEED_FORWARD_ONLY
-  CHECK_EQ(this->group_, 1);
-#endif
   workspaceSizeInBytes = 0;
   workspaceData = NULL;
   workspace = new void*[this->group_ * CUDNN_STREAMS_PER_GROUP];
@@ -98,18 +86,6 @@ void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
 
   handles_setup_ = true;
 }
-
-#ifdef FEED_FORWARD_ONLY
-template <typename Dtype>
-void CuDNNConvolutionLayer<Dtype>::setSharedWorkspace(shared_ptr<SharedCuDNNData<Dtype> > workspace) 
-{
-  shared_workspace_ = workspace;
-  if(workspaceData) {
-    cudaFree(workspaceData);
-    workspaceSizeInBytes = 0;
-  }
-}
-#endif
 
 template <typename Dtype>
 void CuDNNConvolutionLayer<Dtype>::Reshape(
@@ -175,7 +151,6 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
           CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
           workspace_limit_bytes, &bwd_filter_algo_[i]) );
 
-#ifndef FEED_FORWARD_ONLY
     // get workspace for backwards filter algorithm
     CUDNN_CHECK(cudnnGetConvolutionBackwardFilterWorkspaceSize(handle_[0],
           bottom_descs_[i], top_descs_[i], conv_descs_[i], filter_desc_,
@@ -191,7 +166,6 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
     CUDNN_CHECK(cudnnGetConvolutionBackwardDataWorkspaceSize(handle_[0],
           filter_desc_, top_descs_[i], conv_descs_[i], bottom_descs_[i],
           bwd_data_algo_[i], &workspace_bwd_data_sizes_[i]) );
-#endif
   }
 
   // reduce over all workspace sizes to get a maximum to allocate / reallocate
@@ -202,12 +176,10 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
   for (size_t i = 0; i < bottom.size(); i++) {
     total_workspace_fwd        = std::max(total_workspace_fwd,
                                      workspace_fwd_sizes_[i]);
-#ifndef FEED_FORWARD_ONLY
     total_workspace_bwd_data   = std::max(total_workspace_bwd_data,
                                      workspace_bwd_data_sizes_[i]);
     total_workspace_bwd_filter = std::max(total_workspace_bwd_filter,
                                      workspace_bwd_filter_sizes_[i]);
-#endif
   }
   // get max over all operations
   size_t max_workspace = std::max(total_workspace_fwd,
@@ -218,33 +190,14 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
                                (this->group_ * CUDNN_STREAMS_PER_GROUP);
 
   // this is the total amount of storage needed over all groups + streams
-#ifdef FEED_FORWARD_ONLY
-  if(shared_workspace_) {
-    workspaceSizeInBytes  = shared_workspace_->getConvWorkspaceSize();
-    this->workspaceData = shared_workspace_->getConvWorkspaceData();
-  }
-#endif
-
   if (total_max_workspace > workspaceSizeInBytes) {
     DLOG(INFO) << "Reallocating workspace storage: " << total_max_workspace;
     workspaceSizeInBytes = total_max_workspace;
 
-    #ifdef FEED_FORWARD_ONLY
-      cudaError_t err = cudaSuccess;
-      if(shared_workspace_) {
-        workspaceData = shared_workspace_->resizeConvWorkspace(workspaceSizeInBytes);
-        err = (workspaceData == NULL) ? cudaErrorMemoryAllocation : cudaSuccess;
-      }
-      else {
-        cudaFree(this->workspaceData);
-        err = cudaMalloc(&(this->workspaceData), workspaceSizeInBytes);
-      }
-    #else
-      // free the existing workspace and allocate a new (larger) one
-      cudaFree(this->workspaceData);
-      cudaError_t err = cudaMalloc(&(this->workspaceData), workspaceSizeInBytes);
-    #endif
+    // free the existing workspace and allocate a new (larger) one
+    cudaFree(this->workspaceData);
 
+    cudaError_t err = cudaMalloc(&(this->workspaceData), workspaceSizeInBytes);
     if (err != cudaSuccess) {
       // force zero memory path
       for (int i = 0; i < bottom.size(); i++) {
@@ -264,11 +217,11 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
       workspaceData = NULL;
       workspaceSizeInBytes = 0;
     }
-  }
 
-  // JAL moved here so it is always upto date if using FEED_FORWARD_ONLY
-  for (int g = 0; g < (this->group_ * CUDNN_STREAMS_PER_GROUP); g++) {
-    workspace[g] = reinterpret_cast<char *>(workspaceData) + g*max_workspace;
+    // if we succeed in the allocation, set pointer aliases for workspaces
+    for (int g = 0; g < (this->group_ * CUDNN_STREAMS_PER_GROUP); g++) {
+      workspace[g] = reinterpret_cast<char *>(workspaceData) + g*max_workspace;
+    }
   }
 
   // Tensor descriptor for bias.
@@ -279,16 +232,15 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
 }
 
 template <typename Dtype>
-void CuDNNConvolutionLayer<Dtype>::CleanUp() {
+CuDNNConvolutionLayer<Dtype>::~CuDNNConvolutionLayer() {
+  // Check that handles have been setup before destroying.
+  if (!handles_setup_) { return; }
+
   for (int i = 0; i < bottom_descs_.size(); i++) {
     cudnnDestroyTensorDescriptor(bottom_descs_[i]);
     cudnnDestroyTensorDescriptor(top_descs_[i]);
     cudnnDestroyConvolutionDescriptor(conv_descs_[i]);
   }
-  bottom_descs_.clear();
-  top_descs_.clear();
-  conv_descs_.clear();
-
   if (this->bias_term_) {
     cudnnDestroyTensorDescriptor(bias_desc_);
   }
@@ -299,35 +251,15 @@ void CuDNNConvolutionLayer<Dtype>::CleanUp() {
     cudnnDestroy(handle_[g]);
   }
 
-
-#ifdef FEED_FORWARD_ONLY
-  if(!shared_workspace_ && workspaceData) {
-    cudaFree(workspaceData);
-    workspaceData = NULL;
-  }
-#else
-  if(workspaceData) {
-    cudaFree(workspaceData);
-    workspaceData = NULL;
-  }
-#endif
-
-  delete[] stream_;
-  delete[] handle_;
-  delete[] fwd_algo_;
-  delete[] bwd_filter_algo_;
-  delete[] bwd_data_algo_;
-  delete[] workspace_fwd_sizes_;
-  delete[] workspace_bwd_data_sizes_;
-  delete[] workspace_bwd_filter_sizes_;
-}
-
-template <typename Dtype>
-CuDNNConvolutionLayer<Dtype>::~CuDNNConvolutionLayer() {
-  // Check that handles have been setup before destroying.
-  if (!handles_setup_) { return; }
-
-  CleanUp();
+  cudaFree(workspaceData);
+  delete [] stream_;
+  delete [] handle_;
+  delete [] fwd_algo_;
+  delete [] bwd_filter_algo_;
+  delete [] bwd_data_algo_;
+  delete [] workspace_fwd_sizes_;
+  delete [] workspace_bwd_data_sizes_;
+  delete [] workspace_bwd_filter_sizes_;
 }
 
 INSTANTIATE_CLASS(CuDNNConvolutionLayer);

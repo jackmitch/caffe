@@ -10,10 +10,6 @@ void CuDNNLRNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
   LRNLayer<Dtype>::LayerSetUp(bottom, top);
 
-  if(handles_setup_) {
-    CleanUp();
-  }
-
   CUDNN_CHECK(cudnnCreate(&handle_));
   CUDNN_CHECK(cudnnCreateLRNDescriptor(&norm_desc_));
   cudnn::createTensor4dDesc<Dtype>(&bottom_desc_);
@@ -40,20 +36,15 @@ void CuDNNLRNLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 }
 
 template <typename Dtype>
-void CuDNNLRNLayer<Dtype>::CleanUp() {
+CuDNNLRNLayer<Dtype>::~CuDNNLRNLayer() {
+  // Check that handles have been setup before destroying.
+  if (!handles_setup_) { return; }
+
   cudnnDestroyTensorDescriptor(bottom_desc_);
   cudnnDestroyTensorDescriptor(top_desc_);
 
   // destroy LRN handle
   cudnnDestroy(handle_);
-}
-
-template <typename Dtype>
-CuDNNLRNLayer<Dtype>::~CuDNNLRNLayer() {
-  // Check that handles have been setup before destroying.
-  if (!handles_setup_) { return; }
-
-  CleanUp();
 }
 
 INSTANTIATE_CLASS(CuDNNLRNLayer);

@@ -69,8 +69,6 @@ class SyncedMemory {
   void async_gpu_push(const cudaStream_t& stream);
 #endif
 
-  void resize(size_t new_size);
-
  private:
   void to_cpu();
   void to_gpu();

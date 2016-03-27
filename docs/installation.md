@@ -14,9 +14,8 @@ The official Makefile and `Makefile.config` build are complemented by a [communi
 - [Ubuntu installation](install_apt.html) *the standard platform*
 - [OS X installation](install_osx.html)
 - [RHEL / CentOS / Fedora installation](install_yum.html)
-- [Windows](https://github.com/BVLC/caffe/tree/windows) *see the Windows branch led by Guillaume Dumont*
+- [Windows](https://github.com/BVLC/caffe/tree/windows) *see the Windows branch led by Microsoft*
 - [OpenCL](https://github.com/BVLC/caffe/tree/opencl) *see the OpenCL branch led by Fabian Tschopp*
-- [AWS AMI](https://github.com/bitfusionio/amis/tree/master/awsmrkt-bfboost-ubuntu14-cuda75-caffe) *pre-configured for AWS*
 
 **Overview**:
 

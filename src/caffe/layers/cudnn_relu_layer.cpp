@@ -10,9 +10,6 @@ void CuDNNReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   ReLULayer<Dtype>::LayerSetUp(bottom, top);
   // initialize cuDNN
-  if(handles_setup_) {
-    CleanUp();
-  }
   CUDNN_CHECK(cudnnCreate(&handle_));
   cudnn::createTensor4dDesc<Dtype>(&bottom_desc_);
   cudnn::createTensor4dDesc<Dtype>(&top_desc_);
@@ -33,18 +30,13 @@ void CuDNNReLULayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 }
 
 template <typename Dtype>
-void CuDNNReLULayer<Dtype>::CleanUp() {
-  cudnnDestroyTensorDescriptor(this->bottom_desc_);
-  cudnnDestroyTensorDescriptor(this->top_desc_);
-  cudnnDestroy(this->handle_);
-}
-
-template <typename Dtype>
 CuDNNReLULayer<Dtype>::~CuDNNReLULayer() {
   // Check that handles have been setup before destroying.
   if (!handles_setup_) { return; }
 
-  CleanUp();
+  cudnnDestroyTensorDescriptor(this->bottom_desc_);
+  cudnnDestroyTensorDescriptor(this->top_desc_);
+  cudnnDestroy(this->handle_);
 }
 
 INSTANTIATE_CLASS(CuDNNReLULayer);

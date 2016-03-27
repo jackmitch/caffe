@@ -41,19 +41,7 @@ Solver<Dtype>::Solver(const string& param_file, const Solver* root_solver)
       requested_early_exit_(false) {
   SolverParameter param;
   ReadSolverParamsFromTextFileOrDie(param_file, &param);
-  CheckType(&param);
   Init(param);
-}
-
-template <typename Dtype>
-void Solver<Dtype>::CheckType(SolverParameter* param) {
-  // Harmonize solver class type with configured type to avoid confusion.
-  if (param->has_type()) {
-    CHECK_EQ(param->type(), this->type())
-        << "Solver type must agree with instantiated solver class.";
-  } else {
-    param->set_type(this->type());
-  }
 }
 
 template <typename Dtype>
@@ -479,11 +467,6 @@ void Solver<Dtype>::TestDetection(const int test_net_id) {
           float score = result_vec[k * 5 + 2];
           int tp = static_cast<int>(result_vec[k * 5 + 3]);
           int fp = static_cast<int>(result_vec[k * 5 + 4]);
-          if (tp == 0 && fp == 0) {
-            // Ignore such case. It happens when a detection bbox is matched to
-            // a difficult gt bbox and we don't evaluate on difficult gt bbox.
-            continue;
-          }
           all_true_pos[j][label].push_back(std::make_pair(score, tp));
           all_false_pos[j][label].push_back(std::make_pair(score, fp));
         }
@@ -536,9 +519,6 @@ void Solver<Dtype>::TestDetection(const int test_net_id) {
       ComputeAP(label_true_pos, label_num_pos, label_false_pos,
                 param_.ap_version(), &prec, &rec, &(APs[label]));
       mAP += APs[label];
-      if (param_.show_per_class_result()) {
-        LOG(INFO) << "class" << label << ": " << APs[label];
-      }
     }
     mAP /= num_pos.size();
     const int output_blob_index = test_net->output_blob_indices()[i];

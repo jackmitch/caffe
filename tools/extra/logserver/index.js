@@ -66,9 +66,9 @@ var readLogFile = function(logfile_path) {
 
 app.post('/logfile', (req, res, next) => {
   console.time('/logfile');
-  if(req.body.logFilePath && req.body.logFilePath.length > 0) {
-    console.log('setting logfile to ' + req.body.logFilePath); 
-    logfile_path = req.body.logFilePath;
+  if(req.query.logFilePath && req.query.logFilePath.length > 0) {
+    console.log('setting logfile to ' + req.query.logFilePath); 
+    logfile_path = req.query.logFilePath;
   }
   res.json({success: 'ok'});
 });
@@ -85,15 +85,15 @@ app.get('/data', (req, res, next) => {
   pythonShell.run(python_parser_path, options, function (err, results) {
     console.log('Log file parsed ' + err);
 
-    if (!err) {   
-		// now read the csv files for the train
-		Promise.all([
-		  readLogFile(path.basename(logfile_path) + '.train'),
-		  readLogFile(path.basename(logfile_path) + '.test')
-		]).then(function(results) {
-		   res.json({message: 'success', data: results});
-		})
-	}
+    if (err) throw err;
+    
+    // now read the csv files for the train
+    Promise.all([
+      readLogFile(path.basename(logfile_path) + '.train'),
+      readLogFile(path.basename(logfile_path) + '.test')
+    ]).then(function(results) {
+       res.json({message: 'success', data: results});
+    })
   });
 });
 
