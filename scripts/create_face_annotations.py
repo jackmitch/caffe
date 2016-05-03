@@ -44,7 +44,7 @@ for dirpath, dnames, fnames in os.walk(root):
 					img_filepath = os.path.join(root, 'imgs', classid, img_id + '.jpg')
 
 					# generate the box
-					box = {'xmin':box_left, 'ymin':box_top, 'xmax':box_right, 'ymax':box_bitton}
+					box = {'xmin':box_left, 'ymin':box_top, 'xmax':box_right, 'ymax':box_buttom}
 
 					# convert the box to yolo format
 					if img_url not in images:
@@ -61,8 +61,10 @@ fid = open('trainval.txt', 'w')
 if not os.path.exists('labels'):
 	os.mkdir('labels')
 
+random.shuffle(lut)
+
 while len(lut) > endsize:
-	url = random.choice(lut)
+	url = lut[0]
 	imgpath = images[url]['path']	
 	imgname = os.path.splitext(os.path.basename(imgpath))[0]
 	classname = os.path.basename(os.path.split(imgpath)[0])
@@ -75,13 +77,19 @@ while len(lut) > endsize:
 
 	# write all boxes to file
 	bid = open(anno_path, 'w')
-	bid.write('<annotation>'\n)
+	bid.write('<annotation>\n')
 	for b in images[url]['boxes']:
 		write_box(bid, b)
 	bid.write('</annotation>\n')
 	lut.remove(url)
 	bid.close()
+	
+	if len(lut) % 1000 == 0:
+		print len(lut)
+		
 fid.close()
+
+print 'Created trainval.txt creating test.txt'
 
 # write the remaining images to test file
 fid = open('test.txt', 'w')
@@ -100,9 +108,11 @@ for url in lut:
 		os.mkdir(os.path.join('test_labels', classname))
 
 	bid = open(anno_path, 'w')
-	bid.write('<annotation>'\n)
+	bid.write('<annotation>\n')
 	for b in images[url]['boxes']:
 		write_box(bid, b)
 	bid.write('</annotation>\n')
 	bid.close()
 fid.close()
+
+print 'Created test.txt'
