@@ -98,3 +98,8 @@ MANIFEST-*
 jobs
 temp
 examples/*/*lmdb
+opencv
+boost
+gflags
+glog
+openblas
