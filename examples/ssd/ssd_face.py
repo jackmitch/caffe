@@ -56,9 +56,9 @@ remove_old_models = False
 # The database file for training data. Created by data/VGG_FACE/create_data.sh
 data_root_dir = "/host-ssd1TB/ssd_vgg/"
 
-train_data = data_root_dir + "VGG_FACE_trainval_lmdb"
+train_data = data_root_dir + "lmdb/trainval_lmdb"
 # The database file for testing data. Created by data/VGG_FACE/create_data.sh
-test_data = data_root_dir + "VGG_FACE_test_lmdb"
+test_data = data_root_dir + "lmdb/test_lmdb"
 # Specify the batch sampler.
 resize_width = 300
 resize_height = 300
