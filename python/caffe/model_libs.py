@@ -268,24 +268,24 @@ def VGGNetBody(net, from_layer, need_fc=True, fully_conv=False, reduced=False,
         if fully_conv:
             if dilated:
                 if reduced:
-                    net.fc6 = L.Convolution(net[name], num_output=1024, pad=6, kernel_size=3, dilation=6, **kwargs)
+                    net['fc6-conv'] = L.Convolution(net[name], num_output=1024, pad=6, kernel_size=3, dilation=6, **kwargs)
                 else:
-                    net.fc6 = L.Convolution(net[name], num_output=4096, pad=6, kernel_size=7, dilation=2, **kwargs)
+                    net['fc6-conv'] = L.Convolution(net[name], num_output=4096, pad=6, kernel_size=7, dilation=2, **kwargs)
             else:
                 if reduced:
-                    net.fc6 = L.Convolution(net[name], num_output=1024, pad=3, kernel_size=3, dilation=3, **kwargs)
+                    net['fc6-conv'] = L.Convolution(net[name], num_output=1024, pad=3, kernel_size=3, dilation=3, **kwargs)
                 else:
-                    net.fc6 = L.Convolution(net[name], num_output=4096, pad=3, kernel_size=7, **kwargs)
+                    net['fc6-conv'] = L.Convolution(net[name], num_output=4096, pad=3, kernel_size=7, **kwargs)
 
-            net.relu6 = L.ReLU(net.fc6, in_place=True)
+            net.relu6 = L.ReLU(net[['fc6-conv'], in_place=True)
             if dropout:
                 net.drop6 = L.Dropout(net.relu6, dropout_ratio=0.5, in_place=True)
 
             if reduced:
-                net.fc7 = L.Convolution(net.relu6, num_output=1024, kernel_size=1, **kwargs)
+                net['fc7-conv'] = L.Convolution(net.relu6, num_output=1024, kernel_size=1, **kwargs)
             else:
-                net.fc7 = L.Convolution(net.relu6, num_output=4096, kernel_size=1, **kwargs)
-            net.relu7 = L.ReLU(net.fc7, in_place=True)
+                net['fc7-conv'] = L.Convolution(net.relu6, num_output=4096, kernel_size=1, **kwargs)
+            net.relu7 = L.ReLU(net['fc7-conv'], in_place=True)
             if dropout:
                 net.drop7 = L.Dropout(net.relu7, dropout_ratio=0.5, in_place=True)
         else:

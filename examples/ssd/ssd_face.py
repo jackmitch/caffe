@@ -217,12 +217,12 @@ job_file = "{}/{}.sh".format(job_dir, model_name)
 # Stores the test image names and sizes. Created by data/VGG_FACE/create_list.sh
 name_size_file = data_root_dir + "test_name_size.txt"
 # The pretrained model. We use the Fully convolutional reduced (atrous) VGGNet.
-pretrain_model = data_root_dir + "VGG_FACE_16_layers.caffemodel"
+pretrain_model = data_root_dir + "VGG_FACE_16_layers_full_conv.caffemodel"
 # Stores LabelMapItem.
 label_map_file = "data/VGG_FACE/labelmap_face.prototxt"
 
 # MultiBoxLoss parameters.
-num_classes = 21
+num_classes = 1
 share_location = True
 background_label_id=0
 train_on_diff_gt = True
@@ -254,12 +254,12 @@ loss_param = {
 # minimum dimension of input image
 min_dim = 300
 # conv4_3 ==> 38 x 38
-# fc7 ==> 19 x 19
+# fc7-conv ==> 19 x 19
 # conv6_2 ==> 10 x 10
 # conv7_2 ==> 5 x 5
 # conv8_2 ==> 3 x 3
 # pool6 ==> 1 x 1
-mbox_source_layers = ['conv4_3', 'fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+mbox_source_layers = ['conv4_3', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
 # in percent %
 min_ratio = 20
 max_ratio = 95
@@ -390,7 +390,7 @@ net.data, net.label = CreateAnnotatedDataLayer(train_data, batch_size=batch_size
         train=True, output_label=True, label_map_file=label_map_file,
         transform_param=train_transform_param, batch_sampler=batch_sampler)
 
-VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
+VGGNetBody(net, from_layer='data', fully_conv=True, reduced=False, dilated=True,
     dropout=False, freeze_layers=freeze_layers)
 
 AddExtraLayers(net, use_batchnorm)
@@ -418,7 +418,7 @@ net.data, net.label = CreateAnnotatedDataLayer(test_data, batch_size=test_batch_
         train=False, output_label=True, label_map_file=label_map_file,
         transform_param=test_transform_param)
 
-VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
+VGGNetBody(net, from_layer='data', fully_conv=True, reduced=False, dilated=True,
     dropout=False, freeze_layers=freeze_layers)
 
 AddExtraLayers(net, use_batchnorm)
