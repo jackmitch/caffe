@@ -390,7 +390,7 @@ net.data, net.label = CreateAnnotatedDataLayer(train_data, batch_size=batch_size
         train=True, output_label=True, label_map_file=label_map_file,
         transform_param=train_transform_param, batch_sampler=batch_sampler)
 
-VGGNetBody(net, from_layer='data', fully_conv=True, reduced=False, dilated=True,
+VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
     dropout=False, freeze_layers=freeze_layers)
 
 AddExtraLayers(net, use_batchnorm)
@@ -418,7 +418,7 @@ net.data, net.label = CreateAnnotatedDataLayer(test_data, batch_size=test_batch_
         train=False, output_label=True, label_map_file=label_map_file,
         transform_param=test_transform_param)
 
-VGGNetBody(net, from_layer='data', fully_conv=True, reduced=False, dilated=True,
+VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
     dropout=False, freeze_layers=freeze_layers)
 
 AddExtraLayers(net, use_batchnorm)
