@@ -7,10 +7,10 @@ def write_box(bid, b):
 	bid.write('\t<object>\n')
 	bid.write('\t\t<name>face</name>\n')
 	bid.write('\t\t<bndbox>\n')
-	bid.write('\t\t\t<xmin>%d</xmin>\n' % b['xmin'])
-	bid.write('\t\t\t<ymin>%d</ymin>\n' % b['ymin'])
-	bid.write('\t\t\t<xmax>%d</xmax>\n' % b['xmax'])
-	bid.write('\t\t\t<ymax>%d</ymax>\n' % b['ymax'])
+	bid.write('\t\t\t<xmin>%.2f</xmin>\n' % b['xmin'])
+	bid.write('\t\t\t<ymin>%.2f</ymin>\n' % b['ymin'])
+	bid.write('\t\t\t<xmax>%.2f</xmax>\n' % b['xmax'])
+	bid.write('\t\t\t<ymax>%.2f</ymax>\n' % b['ymax'])
 	bid.write('\t\t</bndbox>\n')
 	bid.write('\t</object>\n')
 	return
@@ -26,10 +26,10 @@ for dirpath, dnames, fnames in os.walk(root):
 	# read all the boxes
 	for f in fnames:
 
-		fullpath = os.path.join(root, dnames, f)
+		fullpath = os.path.join(root, dirpath, f)
 		classid, ext = os.path.splitext(f)
 
-		if ext == '.txt':
+		if ext == '.txt' and classid != 'licence':
 			print 'parsing ' + f
 			fid = open(fullpath, 'r')
 			for line in fid:
@@ -41,10 +41,10 @@ for dirpath, dnames, fnames in os.walk(root):
 					box_top = float(cols[4])
 					box_right = float(cols[5])
 					box_bottom = float(cols[6])
-					img_filepath = os.path.join(root, 'imgs', classid, img_id + '.jpg')
+					img_filepath = os.path.join('img', classid, img_id + '.jpg')
 
 					# generate the box
-					box = {'xmin':box_left, 'ymin':box_top, 'xmax':box_right, 'ymax':box_buttom}
+					box = {'xmin':box_left, 'ymin':box_top, 'xmax':box_right, 'ymax':box_bottom}
 
 					# convert the box to yolo format
 					if img_url not in images:
@@ -70,10 +70,10 @@ while len(lut) > endsize:
 	classname = os.path.basename(os.path.split(imgpath)[0])
 	anno_path = os.path.join('labels', classname, imgname + '_annotation.xml')
 	
-	fid.write(imgpath + ',' + anno_path + '\n')
+	fid.write(imgpath + ' ' + os.path.join('annos', anno_path) + '\n')
 
 	if not os.path.exists(os.path.join('labels', classname)):
-		os.mkdir(os.path.join('labels', classname))
+		os.makedirs(os.path.join('labels', classname))
 
 	# write all boxes to file
 	bid = open(anno_path, 'w')
@@ -102,10 +102,10 @@ for url in lut:
 	classname = os.path.basename(os.path.split(imgpath)[0])
 	anno_path = os.path.join('test_labels', classname, imgname + '_annotation.xml')
 		
-	fid.write(imgpath + ',' + anno_path + '\n')
+	fid.write(imgpath + ' ' + os.path.join('annos', anno_path) + '\n')
 	
 	if not os.path.exists(os.path.join('test_labels', classname)):
-		os.mkdir(os.path.join('test_labels', classname))
+		os.makedirs(os.path.join('test_labels', classname))
 
 	bid = open(anno_path, 'w')
 	bid.write('<annotation>\n')
