@@ -4,7 +4,7 @@ root_dir=$cur_dir/../..
 cd $root_dir
 
 redo=1
-data_root_dir="/host-ssd1TB/ssd_vgg/"
+data_root_dir="/host-ssd1TB/vgg_face_dataset/"
 dataset_name="VGG_FACE"
 mapfile="$root_dir/data/$dataset_name/labelmap_face.prototxt"
 anno_type="detection"
@@ -21,5 +21,5 @@ then
 fi
 for subset in test trainval
 do
-  python $root_dir/scripts/create_annoset.py --anno-type=$anno_type --label-map-file=$mapfile --min-dim=$min_dim --max-dim=$max_dim --resize-width=$width --resize-height=$height --check-label $extra_cmd $data_root_dir $data_root_dir/$subset.txt $data_root_dir/$db/$subset"_"$db
+  python $root_dir/scripts/create_annoset.py --anno-type=$anno_type --label-map-file=$mapfile --min-dim=$min_dim --max-dim=$max_dim --resize-width=$width --resize-height=$height --check-label $extra_cmd $data_root_dir $root_dir/data/$dataset_name/ssd/$subset.txt $root_dir/data/$dataset_name/ssd/$db/$subset"_"$db $root_dir/data/$dataset_name/ssd/examples
 done
