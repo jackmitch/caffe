@@ -222,7 +222,7 @@ pretrain_model = data_root_dir + "VGG_FACE_16_layers_full_conv.caffemodel"
 label_map_file = "data/VGG_FACE/labelmap_face.prototxt"
 
 # MultiBoxLoss parameters.
-num_classes = 1
+num_classes = 2
 share_location = True
 background_label_id=0
 train_on_diff_gt = True
