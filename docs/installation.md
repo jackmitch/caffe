@@ -35,7 +35,7 @@ Caffe has several dependencies:
     * 5.5, and 5.0 are compatible but considered legacy
 * [BLAS](http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) via ATLAS, MKL, or OpenBLAS.
 * [Boost](http://www.boost.org/) >= 1.55
-* `protobuf`, `glog`, `gflags`, `hdf5`
+* `protobuf`, `glog`, `gflags`
 
 Optional dependencies:
 
