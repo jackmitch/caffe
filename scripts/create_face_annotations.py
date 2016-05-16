@@ -149,13 +149,13 @@ def convert_voc_file(input_filepath, images_root, savefolder):
 		os.makedirs(os.path.join(savefolder, 'test_labels'))
 	
 	for id in images:
-		anno_path = os.path.join(savefolder, 'test_labels', id + '_annotation.xml')
+		anno_path = os.path.join('test_labels', id + '_annotation.xml')
 		
-		imgpath = os.path.join(images_root, id)
+		imgpath = os.path.join("images", id)
 		
 		fout.write(imgpath + ' ' + os.path.join(anno_path) + '\n')
 		
-		bid = open(anno_path, 'w')
+		bid = open(os.path.join(savefolder, anno_path), 'w')
 		bid.write('<annotation>\n')
 		for b in images[id]['boxes']:
 			write_box(bid, b)
