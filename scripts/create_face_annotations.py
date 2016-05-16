@@ -151,7 +151,7 @@ def convert_voc_file(input_filepath, images_root, savefolder):
 	for id in images:
 		anno_path = os.path.join('test_labels', id + '_annotation.xml')
 		
-		imgpath = os.path.join("images", id)
+		imgpath = os.path.join("images", "JPEGImages", id)
 		
 		fout.write(imgpath + ' ' + os.path.join(anno_path) + '\n')
 		
