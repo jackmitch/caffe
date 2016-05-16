@@ -114,17 +114,17 @@ def walk_directory(root):
 	
 def convert_voc_file(input_filepath, images_root, savefolder):
 	# load all the lines from file and build up the map
-	fp = open(input_filepath, 'r')
+	fin = open(input_filepath, 'r')
 
 	images = {}
 	
-	for line if fp:
+	for line in fin:
 		cols = line.split(' ')
 		img_id = cols[0]
 		box_left = float(cols[1])
 		box_top = float(cols[2])
 		box_right = float(cols[3])
-		box_bottom = float(cols[4)
+		box_bottom = float(cols[4])
 		img_width = float(cols[5])
 		img_height = float(cols[6])
 		
@@ -132,17 +132,20 @@ def convert_voc_file(input_filepath, images_root, savefolder):
 		box = {'xmin':box_left, 'ymin':box_top, 'xmax':box_right, 'ymax':box_bottom}
 
 		# convert the box to yolo format
-		if img_url not in images:
+		if img_id not in images:
 			images[img_id] = {'boxes':[]}
 
 		images[img_id]['boxes'].append(box)
 		
 
-	file.close()
+	fin.close()
 	
 	# save the image map out
+	if not os.path.exists(savefolder):
+        	os.makedirs(savefolder)
+
 	fout = open(os.path.join(savefolder, 'test.txt'), 'w')
-	if not os.path.exists(os.path.joint(savefolder, 'test_labels')):
+	if not os.path.exists(os.path.join(savefolder, 'test_labels')):
 		os.makedirs(os.path.join(savefolder, 'test_labels'))
 	
 	for id in images:
@@ -170,7 +173,7 @@ if __name__ == "__main__":
 	print 'crawling ' + input
 
 	if input.endswith('.txt'):
-		if encoding == 'face-voc':
+		if encoding == 'pascal-faces':
 			convert_voc_file(input, images_root, savepath);
 	else:
 		walk_directory(input);
