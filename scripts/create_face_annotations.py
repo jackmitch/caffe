@@ -15,104 +15,164 @@ def write_box(bid, b):
 	bid.write('\t</object>\n')
 	return
 
-root = sys.argv[1]
+def walk_directory(root):
+	images = {}
+	lut = []
 
-images = {}
-lut = []
+	for dirpath, dnames, fnames in os.walk(root):
+		# read all the boxes
+		for f in fnames:
 
-print 'crawling ' + root
+			fullpath = os.path.join(root, dirpath, f)
+			classid, ext = os.path.splitext(f)
 
-for dirpath, dnames, fnames in os.walk(root):
-	# read all the boxes
-	for f in fnames:
+			if ext == '.txt' and classid != 'licence':
+				print 'parsing ' + f
+				fid = open(fullpath, 'r')
+				for line in fid:
+					cols = line.split(' ')
+					if len(cols) > 5:
+						img_id = cols[0]
+						img_url = cols[2]
+						box_left = float(cols[3])
+						box_top = float(cols[4])
+						box_right = float(cols[5])
+						box_bottom = float(cols[6])
+						img_filepath = os.path.join('img', classid, img_id + '.jpg')
 
-		fullpath = os.path.join(root, dirpath, f)
-		classid, ext = os.path.splitext(f)
+						# generate the box
+						box = {'xmin':box_left, 'ymin':box_top, 'xmax':box_right, 'ymax':box_bottom}
 
-		if ext == '.txt' and classid != 'licence':
-			print 'parsing ' + f
-			fid = open(fullpath, 'r')
-			for line in fid:
-				cols = line.split(' ')
-				if len(cols) > 5:
-					img_id = cols[0]
-					img_url = cols[2]
-					box_left = float(cols[3])
-					box_top = float(cols[4])
-					box_right = float(cols[5])
-					box_bottom = float(cols[6])
-					img_filepath = os.path.join('img', classid, img_id + '.jpg')
+						# convert the box to yolo format
+						if img_url not in images:
+							images[img_url] = {'boxes':[], 'path':img_filepath}
+							lut.append(img_url)
 
-					# generate the box
-					box = {'xmin':box_left, 'ymin':box_top, 'xmax':box_right, 'ymax':box_bottom}
+						images[img_url]['boxes'].append(box)
 
-					# convert the box to yolo format
-					if img_url not in images:
-						images[img_url] = {'boxes':[], 'path':img_filepath}
-						lut.append(img_url)
+				fid.close()
 
-					images[img_url]['boxes'].append(box)
+		# randomly select 70% of the dataset for training and leave 30% for test
+		endsize = len(lut) * 0.3
+		fid = open('trainval.txt', 'w')
+		if not os.path.exists('labels'):
+			os.mkdir('labels')
 
-			fid.close()
+		random.shuffle(lut)
 
-# randomly select 70% of the dataset for training and leave 30% for test
-endsize = len(lut) * 0.3
-fid = open('trainval.txt', 'w')
-if not os.path.exists('labels'):
-	os.mkdir('labels')
-
-random.shuffle(lut)
-
-while len(lut) > endsize:
-	url = lut[0]
-	imgpath = images[url]['path']	
-	imgname = os.path.splitext(os.path.basename(imgpath))[0]
-	classname = os.path.basename(os.path.split(imgpath)[0])
-	anno_path = os.path.join('labels', classname, imgname + '_annotation.xml')
-	
-	fid.write(imgpath + ' ' + os.path.join('annos', anno_path) + '\n')
-
-	if not os.path.exists(os.path.join('labels', classname)):
-		os.makedirs(os.path.join('labels', classname))
-
-	# write all boxes to file
-	bid = open(anno_path, 'w')
-	bid.write('<annotation>\n')
-	for b in images[url]['boxes']:
-		write_box(bid, b)
-	bid.write('</annotation>\n')
-	lut.remove(url)
-	bid.close()
-	
-	if len(lut) % 1000 == 0:
-		print len(lut)
+	while len(lut) > endsize:
+		url = lut[0]
+		imgpath = images[url]['path']	
+		imgname = os.path.splitext(os.path.basename(imgpath))[0]
+		classname = os.path.basename(os.path.split(imgpath)[0])
+		anno_path = os.path.join('labels', classname, imgname + '_annotation.xml')
 		
-fid.close()
+		fid.write(imgpath + ' ' + os.path.join('annos', anno_path) + '\n')
 
-print 'Created trainval.txt creating test.txt'
+		if not os.path.exists(os.path.join('labels', classname)):
+			os.makedirs(os.path.join('labels', classname))
 
-# write the remaining images to test file
-fid = open('test.txt', 'w')
-if not os.path.exists('test_labels'):
-	os.mkdir('test_labels')
-
-for url in lut:
-	imgpath = images[url]['path']	
-	imgname = os.path.splitext(os.path.basename(imgpath))[0]
-	classname = os.path.basename(os.path.split(imgpath)[0])
-	anno_path = os.path.join('test_labels', classname, imgname + '_annotation.xml')
+		# write all boxes to file
+		bid = open(anno_path, 'w')
+		bid.write('<annotation>\n')
+		for b in images[url]['boxes']:
+			write_box(bid, b)
+		bid.write('</annotation>\n')
+		lut.remove(url)
+		bid.close()
 		
-	fid.write(imgpath + ' ' + os.path.join('annos', anno_path) + '\n')
+		if len(lut) % 1000 == 0:
+			print len(lut)
+			
+	fid.close()
+
+	print 'Created trainval.txt creating test.txt'
+
+	# write the remaining images to test file
+	fid = open('test.txt', 'w')
+	if not os.path.exists('test_labels'):
+		os.mkdir('test_labels')
+
+	for url in lut:
+		imgpath = images[url]['path']	
+		imgname = os.path.splitext(os.path.basename(imgpath))[0]
+		classname = os.path.basename(os.path.split(imgpath)[0])
+		anno_path = os.path.join('test_labels', classname, imgname + '_annotation.xml')
+			
+		fid.write(imgpath + ' ' + os.path.join('annos', anno_path) + '\n')
+		
+		if not os.path.exists(os.path.join('test_labels', classname)):
+			os.makedirs(os.path.join('test_labels', classname))
+
+		bid = open(anno_path, 'w')
+		bid.write('<annotation>\n')
+		for b in images[url]['boxes']:
+			write_box(bid, b)
+		bid.write('</annotation>\n')
+		bid.close()
+	fid.close()
 	
-	if not os.path.exists(os.path.join('test_labels', classname)):
-		os.makedirs(os.path.join('test_labels', classname))
+def convert_voc_file(input_filepath, images_root, savefolder):
+	# load all the lines from file and build up the map
+	fp = open(input_filepath, 'r')
 
-	bid = open(anno_path, 'w')
-	bid.write('<annotation>\n')
-	for b in images[url]['boxes']:
-		write_box(bid, b)
-	bid.write('</annotation>\n')
-	bid.close()
-fid.close()
+	images = {}
+	
+	for line if fp:
+		cols = line.split(' ')
+		img_id = cols[0]
+		box_left = float(cols[1])
+		box_top = float(cols[2])
+		box_right = float(cols[3])
+		box_bottom = float(cols[4)
+		img_width = float(cols[5])
+		img_height = float(cols[6])
+		
+		# generate the box
+		box = {'xmin':box_left, 'ymin':box_top, 'xmax':box_right, 'ymax':box_bottom}
 
-print 'Created test.txt'
+		# convert the box to yolo format
+		if img_url not in images:
+			images[img_id] = {'boxes':[]}
+
+		images[img_id]['boxes'].append(box)
+		
+
+	file.close()
+	
+	# save the image map out
+	fout = open(os.path.join(savefolder, 'test.txt'), 'w')
+	if not os.path.exists(os.path.joint(savefolder, 'test_labels')):
+		os.makedirs(os.path.join(savefolder, 'test_labels'))
+	
+	for id in images:
+		anno_path = os.path.join(savefolder, 'test_labels', id + '_annotation.xml')
+		
+		imgpath = os.path.join(images_root, id)
+		
+		fout.write(imgpath + ' ' + os.path.join(anno_path) + '\n')
+		
+		bid = open(anno_path, 'w')
+		bid.write('<annotation>\n')
+		for b in images[id]['boxes']:
+			write_box(bid, b)
+		bid.write('</annotation>\n')
+		bid.close()
+	fout.close()
+	
+	
+if __name__ == "__main__":
+	input = sys.argv[1]
+	encoding = sys.argv[2]
+	images_root = sys.argv[3]
+	savepath = sys.argv[4]
+
+	print 'crawling ' + input
+
+	if input.endswith('.txt'):
+		if encoding == 'face-voc':
+			convert_voc_file(input, images_root, savepath);
+	else:
+		walk_directory(input);
+
+	print 'Created test.txt'
