@@ -260,6 +260,8 @@ int test() {
         caffe_net.Forward(&iter_loss);
     loss += iter_loss;
     int idx = 0;
+LOG(INFO) << "batch " << i;
+/*
     for (int j = 0; j < result.size(); ++j) {
       const float* result_vec = result[j]->cpu_data();
       for (int k = 0; k < result[j]->count(); ++k, ++idx) {
@@ -274,7 +276,7 @@ int test() {
             caffe_net.output_blob_indices()[j]];
         LOG(INFO) << "Batch " << i << ", " << output_name << " = " << score;
       }
-    }
+    }*/
   }
   loss /= FLAGS_iterations;
   LOG(INFO) << "Loss: " << loss;
