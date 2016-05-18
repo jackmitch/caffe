@@ -103,3 +103,11 @@ boost
 gflags
 glog
 openblas
+
+#Visual Studio files
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.pdb
+*.props
