@@ -148,9 +148,12 @@
     <ClCompile Include="..\..\src\caffe\layers\multinomial_logistic_loss_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\mvn_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\neuron_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\layers\normalize_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\layers\permute_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\pooling_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\power_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\prelu_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\layers\prior_box_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\reduction_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\relu_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\reshape_layer.cpp" />
@@ -188,9 +191,11 @@
     <ClCompile Include="..\..\src\caffe\util\db_lmdb.cpp" />
     <ClCompile Include="..\..\src\caffe\util\hdf5.cpp" />
     <ClCompile Include="..\..\src\caffe\util\im2col.cpp" />
+    <ClCompile Include="..\..\src\caffe\util\im_transforms.cpp" />
     <ClCompile Include="..\..\src\caffe\util\insert_splits.cpp" />
     <ClCompile Include="..\..\src\caffe\util\io.cpp" />
     <ClCompile Include="..\..\src\caffe\util\math_functions.cpp" />
+    <ClCompile Include="..\..\src\caffe\util\sampler.cpp" />
     <ClCompile Include="..\..\src\caffe\util\signal_handler.cpp" />
     <ClCompile Include="..\..\src\caffe\util\upgrade_proto.cpp" />
   </ItemGroup>
