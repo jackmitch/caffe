@@ -162,11 +162,15 @@ def convert_voc_file(input_filepath, images_root, savefolder):
 		bid.close()
 	fout.close()
 	
-def walk_ffld_directory(root):
+def walk_ffld_directory(root, images_root, savepath):
+	images = {}
+	lut = []
+	print "Walking FFLD directory " + root
 
-	for dirpath, dnames, fnames in os.walk(root):
+	for dirpath, dnames, fnames in os.walk(root, followlinks=True):
 		# read all the boxes
 		for f in fnames:
+			print f
 			fullpath = os.path.join(root, dirpath, f)
 			classid, ext = os.path.splitext(f)
 
@@ -177,42 +181,47 @@ def walk_ffld_directory(root):
 					cols = line.split(' ')
 					if len(cols) == 5:
 						img_path = os.path.basename(cols[0])
-						left = cols[1]
-						top = cols[2]
-						width = cols[3]
-						height = cols[4]
+						left = float(cols[1])
+						top = float(cols[2])
+						width = float(cols[3])
+						height = float(cols[4])
 					
 					# generate the box
 					box = {'xmin':left, 'ymin':top, 'xmax':left+width, 'ymax':top+height}
 
 					if img_path not in images:
-						images[img_path] = {'boxes':[], 'path':img_filepath}
+						images[img_path] = {'boxes':[], 'path':img_path}
 						lut.append(img_path)
 
 					images[img_path]['boxes'].append(box)
 			elif ext.lower() == '.jpg' or ext.lower() == '.jpeg':
+				img_path = os.path.basename(f)
 				if img_path not in images:
-					images[img_path] = {'boxes':[], 'path':img_filepath}
+					images[img_path] = {'boxes':[], 'path':img_path}
 					lut.append(img_path)
+
 
 	# randomly select 90% of the dataset for training and leave rest for test
 	endsize = len(lut) * 0.1
-	fid = open('trainval.txt', 'w')
-	if not os.path.exists('labels'):
-		os.mkdir('labels')
+	fid = open(os.path.join(savepath, 'trainval.txt'), 'a')
+	if not os.path.exists(os.path.join(savepath, 'labels')):
+		os.makedirs(os.path.join(savepath, 'labels'))
 
 	random.shuffle(lut)
 
 	while len(lut) > endsize:
 		url = lut[0]
-		imgpath = images[url]['path']	
+		imgpath = os.path.join(images_root, images[url]['path'])
 		imgname = os.path.splitext(os.path.basename(imgpath))[0]
-		anno_path = os.path.join('labels', imgname + '_annotation.xml')
+		anno_path = os.path.join('labels', images_root, imgname + '_annotation.xml')
 		
 		fid.write(imgpath + ' ' + os.path.join('annos', anno_path) + '\n')
 
+		if not os.path.exists(os.path.join(savepath, os.path.dirname(anno_path))):
+                	os.makedirs(os.path.join(savepath, os.path.dirname(anno_path)))
+
 		# write all boxes to file
-		bid = open(anno_path, 'w')
+		bid = open(os.path.join(savepath, anno_path), 'w')
 		bid.write('<annotation>\n')
 		for b in images[url]['boxes']:
 			write_box(bid, b)
@@ -228,18 +237,21 @@ def walk_ffld_directory(root):
 	print 'Created trainval.txt creating test.txt'
 
 	# write the remaining images to test file
-	fid = open('test.txt', 'w')
-	if not os.path.exists('test_labels'):
-		os.mkdir('test_labels')
+	fid = open(os.path.join(savepath, 'test.txt'), 'a')
+	if not os.path.exists(os.path.join(savepath, 'test_labels')):
+		os.makedirs(os.path.join(savepath, 'test_labels'))
 
 	for url in lut:
-		imgpath = images[url]['path']	
+		imgpath = os.path.join(images_root, images[url]['path'])	
 		imgname = os.path.splitext(os.path.basename(imgpath))[0]
-		anno_path = os.path.join('test_labels', imgname + '_annotation.xml')
+		anno_path = os.path.join('test_labels', images_root, imgname + '_annotation.xml')
 			
 		fid.write(imgpath + ' ' + os.path.join('annos', anno_path) + '\n')
+
+		if not os.path.exists(os.path.join(savepath, os.path.dirname(anno_path))):
+			os.makedirs(os.path.join(savepath, os.path.dirname(anno_path)))
 		
-		bid = open(anno_path, 'w')
+		bid = open(os.path.join(savepath, anno_path), 'w')
 		bid.write('<annotation>\n')
 		for b in images[url]['boxes']:
 			write_box(bid, b)
@@ -263,6 +275,6 @@ if __name__ == "__main__":
 		if encoding == 'vgg':
 			walk_vgg_directory(input)
 		else:
-			walk_ffld_directory(input)
+			walk_ffld_directory(input, images_root, savepath)
 			
 	print 'Created test.txt'
