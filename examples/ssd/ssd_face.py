@@ -54,9 +54,9 @@ resume_training = True
 remove_old_models = False
 
 # The database file for training data. Created by data/VGG_FACE/create_data.sh
-data_root_dir = sys.args[1]  # e.g. "/host-ssd1TB/ssd_vgg/"
-model_basename = sys.args[2] # e.g. VGG_FACE_16 or VGG_M
-pretrain_model_weights = sys.args[3] # e.g. "VGG_FACE_16_layers_full_conv.caffemodel"' 
+data_root_dir = sys.argv[1]  # e.g. "/host-ssd1TB/ssd_vgg/"
+model_basename = sys.argv[2] # e.g. VGG_FACE_16 or VGG_M
+pretrain_model_weights = sys.argv[3] # e.g. "VGG_FACE_16_layers_full_conv.caffemodel"' 
 
 train_data = data_root_dir + "lmdb/trainval_lmdb"
 # The database file for testing data. Created by data/VGG_FACE/create_data.sh
@@ -261,7 +261,12 @@ min_dim = 300
 # conv7_2 ==> 5 x 5
 # conv8_2 ==> 3 x 3
 # pool6 ==> 1 x 1
-mbox_source_layers = ['conv4_3', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+
+if model_basename == 'VGG_M':
+  mbox_source_layers = ['conv4', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+else:
+  mbox_source_layers = ['conv4_3', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+
 # in percent %
 min_ratio = 20
 max_ratio = 95
@@ -315,7 +320,11 @@ elif normalization_mode == P.Loss.FULL:
   base_lr *= 2000. / iter_size
 
 # Which layers to freeze (no backward) during training.
-freeze_layers = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2']
+
+if model_basename == 'VGG_M':
+  freeze_layers = ['conv1', 'conv2', 'conv3']
+else:
+  freeze_layers = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2']
 
 # Evaluate on whole test set.
 num_test_image = 4952
@@ -393,6 +402,7 @@ net.data, net.label = CreateAnnotatedDataLayer(train_data, batch_size=batch_size
         transform_param=train_transform_param, batch_sampler=batch_sampler)
 
 if model_basename == 'VGG_M':
+	print("USING VGG_M model")
 	VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
 				dropout=False, freeze_layers=freeze_layers)
 else:
@@ -425,11 +435,11 @@ net.data, net.label = CreateAnnotatedDataLayer(test_data, batch_size=test_batch_
         transform_param=test_transform_param)
 
 if model_basename == 'VGG_M':
-	VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
-				dropout=False, freeze_layers=freeze_layers)
+  VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
+                dropout=False, freeze_layers=freeze_layers)
 else:
-	VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
-				dropout=False, freeze_layers=freeze_layers)
+  VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
+             dropout=False, freeze_layers=freeze_layers)
 				
 AddExtraLayers(net, use_batchnorm)
 
