@@ -114,3 +114,6 @@ openblas
 *.opensdf
 *.pdb
 *.props
+protobuf
+3rdparty/
+tools/binman/node_modules/
