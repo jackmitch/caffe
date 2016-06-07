@@ -54,7 +54,9 @@ resume_training = True
 remove_old_models = False
 
 # The database file for training data. Created by data/VGG_FACE/create_data.sh
-data_root_dir = "/host-ssd1TB/ssd_vgg/"
+data_root_dir = sys.args[1]  # e.g. "/host-ssd1TB/ssd_vgg/"
+model_basename = sys.args[2] # e.g. VGG_FACE_16 or VGG_M
+pretrain_model_weights = sys.args[3] # e.g. "VGG_FACE_16_layers_full_conv.caffemodel"' 
 
 train_data = data_root_dir + "lmdb/trainval_lmdb"
 # The database file for testing data. Created by data/VGG_FACE/create_data.sh
@@ -193,7 +195,7 @@ else:
 # Modify the job name if you want.
 job_name = "SSD_{}".format(resize)
 # The name of the model. Modify it if you want.
-model_name = "VGG_FACE_16_{}".format(job_name)
+model_name = (model_basename + "_{}").format(job_name)
 
 # Directory which stores the model .prototxt file.
 save_dir = data_root_dir + "models/{}".format(job_name)
@@ -217,7 +219,7 @@ job_file = "{}/{}.sh".format(job_dir, model_name)
 # Stores the test image names and sizes. Created by data/VGG_FACE/create_list.sh
 name_size_file = data_root_dir + "test_name_size.txt"
 # The pretrained model. We use the Fully convolutional reduced (atrous) VGGNet.
-pretrain_model = data_root_dir + "VGG_FACE_16_layers_full_conv.caffemodel"
+pretrain_model = data_root_dir + pretrain_model_weights
 # Stores LabelMapItem.
 label_map_file = "data/VGG_FACE/labelmap_face.prototxt"
 
