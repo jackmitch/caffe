@@ -392,9 +392,13 @@ net.data, net.label = CreateAnnotatedDataLayer(train_data, batch_size=batch_size
         train=True, output_label=True, label_map_file=label_map_file,
         transform_param=train_transform_param, batch_sampler=batch_sampler)
 
-VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
-    dropout=False, freeze_layers=freeze_layers)
-
+if model_basename == 'VGG_M':
+	VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
+				dropout=False, freeze_layers=freeze_layers)
+else:
+	VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
+				dropout=False, freeze_layers=freeze_layers)
+				
 AddExtraLayers(net, use_batchnorm)
 
 mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source_layers,
@@ -420,9 +424,13 @@ net.data, net.label = CreateAnnotatedDataLayer(test_data, batch_size=test_batch_
         train=False, output_label=True, label_map_file=label_map_file,
         transform_param=test_transform_param)
 
-VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
-    dropout=False, freeze_layers=freeze_layers)
-
+if model_basename == 'VGG_M':
+	VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
+				dropout=False, freeze_layers=freeze_layers)
+else:
+	VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
+				dropout=False, freeze_layers=freeze_layers)
+				
 AddExtraLayers(net, use_batchnorm)
 
 mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source_layers,
