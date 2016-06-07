@@ -217,7 +217,7 @@ snapshot_prefix = "{}/{}".format(snapshot_dir, model_name)
 job_file = "{}/{}.sh".format(job_dir, model_name)
 
 # Stores the test image names and sizes. Created by data/VGG_FACE/create_list.sh
-name_size_file = data_root_dir + "test_name_size.txt"
+name_size_file = "" #data_root_dir + "test_name_size.txt"
 # The pretrained model. We use the Fully convolutional reduced (atrous) VGGNet.
 pretrain_model = data_root_dir + pretrain_model_weights
 # Stores LabelMapItem.

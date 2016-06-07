@@ -15,8 +15,10 @@ namespace bp = boost::python;
 #include "caffe/caffe.hpp"
 #include "caffe/util/signal_handler.h"
 
+#ifdef _MSC_VER
 #include "caffe/layers/memory_data_layer.hpp"
 #include <opencv2/opencv.hpp>
+#endif
 
 using caffe::Blob;
 using caffe::Caffe;
@@ -302,18 +304,19 @@ LOG(INFO) << "batch " << i;
 }
 RegisterBrewFunction(test);
 
+#ifdef _MSC_VER
 struct ImagePart {
-  float sf;
   int offset_x;
   int offset_y;
+  float sf;
   ImagePart() : offset_x(0), offset_y(0), sf(1.f) {}
   ImagePart(int x, int y, float scale) : offset_x(x), offset_y(y), sf(scale) {}
 };
 
 struct FaceDetection {
-  int left, top, bottom, right;
-  float score;
   bool ignore;
+  float score;
+  int left, top, bottom, right;
   FaceDetection() : ignore(false), score(0.f) {}
 };
 
@@ -348,11 +351,14 @@ bool intersect(const FaceDetection& reference, const FaceDetection& rect) {
 void nonMaximaSuppression_(std::map<float, FaceDetection>& detections)
 {
   // Non maxima suppression
-  for (auto i = detections.rbegin(); i != detections.rend(); i++) {
+  typedef std::map<float, FaceDetection>::reverse_iterator RFaceItr;
+  typedef std::map<float, FaceDetection>::iterator FaceItr;
+
+  for (RFaceItr i = detections.rbegin(); i != detections.rend(); i++) {
 
     if (i->second.ignore) continue;
 
-    auto j = i;
+    RFaceItr j = i;
     j++;
 
     // find any other overlapping box
@@ -364,20 +370,23 @@ void nonMaximaSuppression_(std::map<float, FaceDetection>& detections)
   }
 
   // clean up detections
-  for (auto i = detections.begin(); i != detections.end(); ) {
-    if (i->second.ignore) {
-      i = detections.erase(i);
+  for (FaceItr q = detections.begin(); q != detections.end(); ) {
+    if (q->second.ignore) {
+      detections.erase(q);
+      q = detections.begin();
     }
     else {
-      i++;
+      q++;
     }
   }
 }
+#endif
 
 int ssdtest() {
   CHECK_GT(FLAGS_model.size(), 0) << "Need a model definition to score.";
   CHECK_GT(FLAGS_weights.size(), 0) << "Need model weights to score.";
 
+#ifdef _MSC_VER
   // Set device id and mode
   vector<int> gpus;
   get_gpus(&gpus);
@@ -439,6 +448,8 @@ int ssdtest() {
     float inv_sf = 1.0 / sf;
 
     std::map<float, FaceDetection> detections;
+    typedef std::map<float, FaceDetection>::reverse_iterator RFaceItr; 
+
     std::vector<ImagePart> sub_imgs;
 
     if (do_patches)
@@ -547,7 +558,7 @@ int ssdtest() {
 
     // draw the top detections
     int cnt = 0;
-    for (auto it = detections.rbegin(); it != detections.rend(); it++, cnt++) {
+    for (RFaceItr it = detections.rbegin(); it != detections.rend(); it++, cnt++) {
       if (it->first > detection_threshold) {
         LOG(INFO) << "Box score " << it->first << " x: " << it->second.left << " y: " << it->second.top;
         cv::Point p0(it->second.left, it->second.top);
@@ -576,7 +587,7 @@ int ssdtest() {
     }
     LOG(INFO) << output_name << " = " << mean_score << loss_msg_stream.str();
   }
-
+#endif
   return 0;
 }
 RegisterBrewFunction(ssdtest);
