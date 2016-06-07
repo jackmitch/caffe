@@ -15,7 +15,7 @@ def write_box(bid, b):
 	bid.write('\t</object>\n')
 	return
 
-def walk_vgg_directory(root):
+def walk_vgg_directory(root, savepath):
 	images = {}
 	lut = []
 
@@ -53,13 +53,14 @@ def walk_vgg_directory(root):
 
 	# randomly select 90% of the dataset for training and leave reset for test
 	endsize = len(lut) * 0.1
-	fid = open('trainval.txt', 'w')
-	if not os.path.exists('labels'):
-		os.mkdir('labels')
+	fid = open(os.path.join(savepath, 'trainval.txt'), 'a')
+	if not os.path.exists(os.path.join(savepath, 'labels')):
+		os.makedirs(os.path.join(savepath, 'labels'))
 
 	random.shuffle(lut)
 
-	while len(lut) > endsize:
+	count = 0
+	while len(lut) > endsize and count < 150000:
 		url = lut[0]
 		imgpath = images[url]['path']	
 		imgname = os.path.splitext(os.path.basename(imgpath))[0]
@@ -68,11 +69,12 @@ def walk_vgg_directory(root):
 		
 		fid.write(imgpath + ' ' + os.path.join('annos', anno_path) + '\n')
 
-		if not os.path.exists(os.path.join('labels', classname)):
-			os.makedirs(os.path.join('labels', classname))
-
+		if not os.path.exists(os.path.join(savepath, 'labels', classname)):
+			os.makedirs(os.path.join(savepath, 'labels', classname))
+		
+		count += 1
 		# write all boxes to file
-		bid = open(anno_path, 'w')
+		bid = open(os.path.join(savepath, anno_path), 'w')
 		bid.write('<annotation>\n')
 		for b in images[url]['boxes']:
 			write_box(bid, b)
@@ -88,10 +90,11 @@ def walk_vgg_directory(root):
 	print 'Created trainval.txt creating test.txt'
 
 	# write the remaining images to test file
-	fid = open('test.txt', 'w')
-	if not os.path.exists('test_labels'):
-		os.mkdir('test_labels')
+	fid = open(os.path.join(savepath, 'test.txt'), 'a')
+	if not os.path.exists(os.path.join(savepath, 'test_labels')):
+		os.makedirs(os.path.join(savepath, 'test_labels'))
 
+	count = 0
 	for url in lut:
 		imgpath = images[url]['path']	
 		imgname = os.path.splitext(os.path.basename(imgpath))[0]
@@ -100,15 +103,18 @@ def walk_vgg_directory(root):
 			
 		fid.write(imgpath + ' ' + os.path.join('annos', anno_path) + '\n')
 		
-		if not os.path.exists(os.path.join('test_labels', classname)):
-			os.makedirs(os.path.join('test_labels', classname))
+		if not os.path.exists(os.path.join(savepath, 'test_labels', classname)):
+			os.makedirs(os.path.join(savepath, 'test_labels', classname))
 
-		bid = open(anno_path, 'w')
+		bid = open(os.path.join(savepath, anno_path), 'w')
 		bid.write('<annotation>\n')
 		for b in images[url]['boxes']:
 			write_box(bid, b)
 		bid.write('</annotation>\n')
 		bid.close()
+		count += 1
+		if count > 10000:
+			break
 	fid.close()
 	
 def convert_voc_file(input_filepath, images_root, savefolder):
@@ -273,7 +279,7 @@ if __name__ == "__main__":
 			convert_voc_file(input, images_root, savepath)
 	else:
 		if encoding == 'vgg':
-			walk_vgg_directory(input)
+			walk_vgg_directory(input, savepath)
 		else:
 			walk_ffld_directory(input, images_root, savepath)
 			
