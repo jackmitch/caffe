@@ -181,7 +181,7 @@ def CreateAnnotatedDataLayer(source, batch_size=32, backend=P.Data.LMDB,
         return data
 
 def VGG_M_NetBody(net, from_layer, need_fc=True, fully_conv=False, reduced=False,
-				dilated=False, nopool=False, dropout=True, freeze_layers=[])
+				dilated=False, nopool=False, dropout=True, freeze_layers=[]):
 				
     kwargs = {
             'param': [dict(lr_mult=1, decay_mult=1), dict(lr_mult=2, decay_mult=0)],
