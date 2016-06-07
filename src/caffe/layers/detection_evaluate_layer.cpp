@@ -20,7 +20,7 @@ void DetectionEvaluateLayer<Dtype>::LayerSetUp(
   overlap_threshold_ = detection_evaluate_param.overlap_threshold();
   CHECK_GT(overlap_threshold_, 0.) << "overlap_threshold must be non negative.";
   evaluate_difficult_gt_ = detection_evaluate_param.evaluate_difficult_gt();
-  if (detection_evaluate_param.has_name_size_file()) {
+  if (detection_evaluate_param.has_name_size_file() && !detection_evaluate_param.name_size_file().empty()) {
     string name_size_file = detection_evaluate_param.name_size_file();
     std::ifstream infile(name_size_file.c_str());
     CHECK(infile.good())
