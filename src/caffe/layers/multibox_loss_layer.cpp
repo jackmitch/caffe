@@ -184,7 +184,7 @@ void MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     map<int, vector<int> > match_indices;
     vector<int> neg_indices;
     // Check if there is ground truth for current image.
-    if (all_gt_bboxes.find(i) == all_gt_bboxes.end()) {
+    if (!do_neg_mining_ && all_gt_bboxes.find(i) == all_gt_bboxes.end()) {
       // There is no gt for current image. All predictions are negative.
       all_match_indices_.push_back(match_indices);
       all_neg_indices_.push_back(neg_indices);
