@@ -570,10 +570,6 @@ void MultiBoxLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 }
 
 
-#ifdef CPU_ONLY
-STUB_GPU(MultiBoxLossLayer);
-#endif
-
 INSTANTIATE_CLASS(MultiBoxLossLayer);
 REGISTER_LAYER_CLASS(MultiBoxLoss);
 
