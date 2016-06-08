@@ -74,7 +74,9 @@ DataReader<T>::QueuePair::~QueuePair() {
 template <typename T>
 DataReader<T>::Body::Body(const LayerParameter& param)
     : param_(param),
-      new_queue_pairs_() {
+      new_queue_pairs_(),
+      num_skips_(0) {
+  num_skips_ = std::min((int)(param_.data_param().batch_size()), 3);
   StartInternalThread();
 }
 
@@ -123,8 +125,18 @@ void DataReader<T>::Body::read_one(db::Cursor* cursor, QueuePair* qp) {
   t->ParseFromString(cursor->value());
   qp->full_.push(t);
 
-  // go to the next iter
-  cursor->Next();
+  if (param_.data_param().shuffle()) { // shuffle
+    // Do shuffle!! randomly skipping data, pretending the batch to contain nearly random accessed data
+    unsigned int skip = caffe_rng_rand() % num_skips_; //caffe_rng_rand() % dataset_->size();
+    while (skip-- > 0) {
+      cursor->Next();
+    }
+  }
+  else { // basic reading w/o shuffle
+    // go to the next iter
+    cursor->Next();
+  }
+
   if (!cursor->valid()) {
     DLOG(INFO) << "Restarting data prefetching from start.";
     cursor->SeekToFirst();
