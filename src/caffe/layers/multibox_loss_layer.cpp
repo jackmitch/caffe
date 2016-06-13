@@ -190,6 +190,10 @@ void MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       all_neg_indices_.push_back(neg_indices);
       continue;
     }
+    else if (all_gt_bboxes.find(i) == all_gt_bboxes.end()) {
+      all_gt_bboxes[i] = vector<NormalizedBBox>();
+    }
+
     // Find match between predictions and ground truth.
     const vector<NormalizedBBox>& gt_bboxes = all_gt_bboxes.find(i)->second;
     map<int, vector<float> > match_overlaps;
