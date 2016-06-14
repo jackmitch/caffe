@@ -32,6 +32,8 @@ void MultiBoxLossLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   loc_classes_ = share_location_ ? 1 : num_classes_;
   background_label_id_ = multibox_loss_param.background_label_id();
   use_difficult_gt_ = multibox_loss_param.use_difficult_gt();
+
+  min_num_negs_ = multibox_loss_param.min_num_negs();
   mining_type_ = multibox_loss_param.mining_type();
   if (multibox_loss_param.has_do_neg_mining()) {
     LOG(WARNING) << "do_neg_mining is deprecated, use mining_type instead.";
@@ -173,11 +175,122 @@ void MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
   num_matches_ = 0;
   int num_negs = 0;
+<<<<<<< HEAD
   // Sample hard negative (and positive) examples based on mining type.
   MineHardExamples(*bottom[1], all_loc_preds, all_gt_bboxes, prior_bboxes,
                    prior_variances, all_match_overlaps, multibox_loss_param_,
                    &num_matches_, &num_negs, &all_match_indices_,
                    &all_neg_indices_);
+=======
+  for (int i = 0; i < num_; ++i) {
+    map<int, vector<int> > match_indices;
+    vector<int> neg_indices;
+    // Check if there is ground truth for current image.
+    if (!do_neg_mining_ && all_gt_bboxes.find(i) == all_gt_bboxes.end()) {
+      // There is no gt for current image. All predictions are negative.
+      all_match_indices_.push_back(match_indices);
+      all_neg_indices_.push_back(neg_indices);
+      continue;
+    }
+    else if (all_gt_bboxes.find(i) == all_gt_bboxes.end()) {
+      all_gt_bboxes[i] = vector<NormalizedBBox>();
+    }
+
+    // Find match between predictions and ground truth.
+    const vector<NormalizedBBox>& gt_bboxes = all_gt_bboxes.find(i)->second;
+    map<int, vector<float> > match_overlaps;
+    if (!use_prior_for_matching_) {
+      for (int c = 0; c < loc_classes_; ++c) {
+        int label = share_location_ ? -1 : c;
+        if (!share_location_ && label == background_label_id_) {
+          // Ignore background loc predictions.
+          continue;
+        }
+        // Decode the prediction into bbox first.
+        vector<NormalizedBBox> loc_bboxes;
+        DecodeBBoxes(prior_bboxes, prior_variances,
+                     code_type_, encode_variance_in_target_,
+                     all_loc_preds[i][label], &loc_bboxes);
+        MatchBBox(gt_bboxes, loc_bboxes, label, match_type_,
+                  overlap_threshold_, &match_indices[label],
+                  &match_overlaps[label]);
+      }
+    } else {
+      // Use prior bboxes to match against all ground truth.
+      vector<int> temp_match_indices;
+      vector<float> temp_match_overlaps;
+      const int label = -1;
+      MatchBBox(gt_bboxes, prior_bboxes, label, match_type_, overlap_threshold_,
+                &temp_match_indices, &temp_match_overlaps);
+      if (share_location_) {
+        match_indices[label] = temp_match_indices;
+        match_overlaps[label] = temp_match_overlaps;
+      } else {
+        // Get ground truth label for each ground truth bbox.
+        vector<int> gt_labels;
+        for (int g = 0; g < gt_bboxes.size(); ++g) {
+          gt_labels.push_back(gt_bboxes[g].label());
+        }
+        // Distribute the matching results to different loc_class.
+        for (int c = 0; c < loc_classes_; ++c) {
+          if (c == background_label_id_) {
+            // Ignore background loc predictions.
+            continue;
+          }
+          match_indices[c].resize(temp_match_indices.size(), -1);
+          match_overlaps[c] = temp_match_overlaps;
+          for (int m = 0; m < temp_match_indices.size(); ++m) {
+            if (temp_match_indices[m] != -1) {
+              const int gt_idx = temp_match_indices[m];
+              CHECK_LT(gt_idx, gt_labels.size());
+              if (c == gt_labels[gt_idx]) {
+                match_indices[c][m] = gt_idx;
+              }
+            }
+          }
+        }
+      }
+    }
+    // Record matching statistics.
+    for (map<int, vector<int> >::iterator it = match_indices.begin();
+         it != match_indices.end(); ++it) {
+      const int label = it->first;
+      // Get positive indices.
+      int num_pos = 0;
+      for (int m = 0; m < match_indices[label].size(); ++m) {
+        if (match_indices[label][m] != -1) {
+          ++num_pos;
+        }
+      }
+      num_matches_ += num_pos;
+      if (do_neg_mining_) {
+        // Get max scores for all the non-matched priors.
+        vector<pair<float, int> > scores_indices;
+        int num_neg = 0;
+        for (int m = 0; m < match_indices[label].size(); ++m) {
+          if (match_indices[label][m] == -1 &&
+              match_overlaps[label][m] < neg_overlap_) {
+            scores_indices.push_back(std::make_pair(all_max_scores[i][m], m));
+            ++num_neg;
+          }
+        }
+        // Pick top num_neg negatives.
+        num_neg = std::min(static_cast<int>(num_pos * neg_pos_ratio_), num_neg);
+        if (num_neg < min_num_negs_) {
+          num_neg = min_num_negs_;
+        }
+        std::sort(scores_indices.begin(), scores_indices.end(),
+                  SortScorePairDescend<int>);
+        for (int n = 0; n < num_neg; ++n) {
+          neg_indices.push_back(scores_indices[n].second);
+        }
+        num_negs += num_neg;
+      }
+    }
+    all_match_indices_.push_back(match_indices);
+    all_neg_indices_.push_back(neg_indices);
+  }
+>>>>>>> f611366... Added option to add a minimum number of negative examples to the confidence loss.
 
   if (num_matches_ >= 1) {
     // Form data to pass on to loc_loss_layer_.
