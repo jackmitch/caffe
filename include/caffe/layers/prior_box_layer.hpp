@@ -37,6 +37,10 @@ class PriorBoxLayer : public Layer<Dtype> {
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
+  virtual inline bool AllowForceBackward(const int bottom_index) const {
+    return false;
+  }
+
   virtual inline const char* type() const { return "PriorBox"; }
   virtual inline int ExactBottomBlobs() const { return 2; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
