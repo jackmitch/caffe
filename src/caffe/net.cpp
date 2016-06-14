@@ -239,7 +239,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   // Handle force_backward if needed.
   if (param.force_backward()) {
     for (int layer_id = 0; layer_id < layers_.size(); ++layer_id) {
-      layer_need_backward_[layer_id] = true;
+      layer_need_backward_[layer_id] = layers_[layer_id]->AllowForceBackward(-1);
       for (int bottom_id = 0;
            bottom_id < bottom_need_backward_[layer_id].size(); ++bottom_id) {
         bottom_need_backward_[layer_id][bottom_id] =
@@ -249,6 +249,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
             blob_need_backward_[bottom_id_vecs_[layer_id][bottom_id]] ||
             bottom_need_backward_[layer_id][bottom_id];
       }
+
       for (int param_id = 0; param_id < layers_[layer_id]->blobs().size();
            ++param_id) {
         layers_[layer_id]->set_param_propagate_down(param_id, true);
