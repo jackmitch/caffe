@@ -88,6 +88,7 @@ class MultiBoxLossLayer : public LossLayer<Dtype> {
   CodeType code_type_;
   bool encode_variance_in_target_;
   bool map_object_to_agnostic_;
+  int min_num_negs_;
 
   int loc_classes_;
   int num_gt_;

@@ -40,6 +40,8 @@ void MultiBoxLossLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   code_type_ = multibox_loss_param.code_type();
   encode_variance_in_target_ = multibox_loss_param.encode_variance_in_target();
   map_object_to_agnostic_ = multibox_loss_param.map_object_to_agnostic();
+  min_num_negs_ = multibox_loss_param.min_num_negs();
+
   if (map_object_to_agnostic_) {
     if (background_label_id_ >= 0) {
       CHECK_EQ(num_classes_, 2);
@@ -274,6 +276,9 @@ void MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
         }
         // Pick top num_neg negatives.
         num_neg = std::min(static_cast<int>(num_pos * neg_pos_ratio_), num_neg);
+        if (num_neg < min_num_negs_) {
+          num_neg = min_num_negs_;
+        }
         std::sort(scores_indices.begin(), scores_indices.end(),
                   SortScorePairDescend<int>);
         for (int n = 0; n < num_neg; ++n) {

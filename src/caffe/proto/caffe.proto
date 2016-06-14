@@ -1221,6 +1221,8 @@ message MultiBoxLossParameter {
   // If true, map all object classes to agnostic class. It is useful for learning
   // objectness detector.
   optional bool map_object_to_agnostic = 17 [default = false];
+  // The minimum number of negative boxes to add to the confidence loss
+  optional uint32 min_num_negs = 18 [default = 1];
 }
 
 message MVNParameter {
