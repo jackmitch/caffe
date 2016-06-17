@@ -353,19 +353,20 @@ struct FaceDetection {
   FaceDetection() : ignore(false), score(0.f) {}
 };
 
-bool intersect(const FaceDetection& reference, const FaceDetection& rect) {
+// return 1 if reference should be ignore, 2 if rect should be ignored and 0 if neither should be ignored
+int intersect(const FaceDetection& reference, const FaceDetection& rect) {
 
   const int left = std::max(reference.left, rect.left);
   const int right = std::min(reference.right, rect.right);
 
   if (right < left)
-    return false;
+    return 0;
 
   const int top = std::max(reference.top, rect.top);
   const int bottom = std::min(reference.bottom, rect.bottom);
 
   if (bottom < top)
-    return false;
+    return 0;
 
   const int intersectionArea = (right - left + 1) * (bottom - top + 1);
   const int rectArea = (rect.right - rect.left) * (rect.bottom - rect.top);
@@ -373,12 +374,13 @@ bool intersect(const FaceDetection& reference, const FaceDetection& rect) {
   const int referenceArea = (reference.right - reference.left) * (reference.bottom - reference.top);
   const int unionArea = referenceArea + rectArea - intersectionArea;
 
-  float threshold_ = 0.4f;
+  float threshold_ = 0.2f;
 
   if ((float)intersectionArea >= (float)unionArea * threshold_) {
-    return true;
+    // ignore the smallest 
+    return rectArea > referenceArea ? 1 : 2;
   }
-  return false;
+  return 0;
 }
 
 void nonMaximaSuppression_(std::map<float, FaceDetection>& detections)
@@ -391,13 +393,18 @@ void nonMaximaSuppression_(std::map<float, FaceDetection>& detections)
 
     if (i->second.ignore) continue;
 
-    RFaceItr j = i;
-    j++;
-
     // find any other overlapping box
-    for ( ; j != detections.rend(); j++) {
-      if (!j->second.ignore && intersect(i->second, j->second)) {
-        j->second.ignore = true;
+    for (RFaceItr j = detections.rbegin(); j != detections.rend(); j++) {
+      if (j != i && !j->second.ignore && !i->second.ignore)
+      {
+        int it = intersect(i->second, j->second);
+        if (it == 1) {
+          i->second.ignore = true;
+          break;
+        }
+        else if (it == 2) {
+          j->second.ignore = true;
+        }
       }
     }
   }
@@ -450,7 +457,7 @@ int ssdtest() {
 
     std::vector<int> labels(1, 0);
 
-    cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\ffld2\\data\\SAM_1246.jpg", CV_LOAD_IMAGE_COLOR);
+    cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\ffld2\\data\\16088701753_28f5605db1_k.jpg", CV_LOAD_IMAGE_COLOR);
     //cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\Pictures\\main_Autographer\\images\\2013-04-24\\b00000059_048875_20130424_000405e.jpg", CV_LOAD_IMAGE_COLOR);
  
     cv::Mat img;
@@ -458,7 +465,7 @@ int ssdtest() {
     // ensure image is below max_im_size_
     float sf = 1.0;
     float detection_threshold = 0.15f;
-    int max_im_size = 1024;
+    int max_im_size = 2048;
     bool do_patches = true;
     int overlap = 50;
     int net_img_size = 300;
@@ -586,6 +593,12 @@ int ssdtest() {
         detections.insert(std::make_pair(det.score, det));
       }
     } // all imgage parts
+
+    for (RFaceItr it = detections.rbegin(); it != detections.rend(); it++) {
+      if (it->first < detection_threshold) {
+        it->second.ignore = true;
+      }
+    }
 
     nonMaximaSuppression_(detections);
 
