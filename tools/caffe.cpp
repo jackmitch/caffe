@@ -517,6 +517,9 @@ int ssdtest() {
       sub_imgs.push_back(ImagePart());
     }
 
+    Timer netTimer;
+    netTimer.Start();
+
     for (size_t n = 0; n < sub_imgs.size(); n++)
     {
       std::vector<cv::Mat> netimgs;
@@ -563,6 +566,9 @@ int ssdtest() {
         detections.insert(std::make_pair(det.score, det));
       }
     } // all imgage parts
+
+    netTimer.Stop();
+    LOG(INFO) << "Time to process image " << netTimer.MilliSeconds() << " msec";
 
     for (RFaceItr it = detections.rbegin(); it != detections.rend(); it++) {
       if (it->first < detection_threshold) {
