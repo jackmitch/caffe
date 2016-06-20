@@ -377,8 +377,8 @@ int intersect(const FaceDetection& reference, const FaceDetection& rect) {
   float threshold_ = 0.2f;
 
   if ((float)intersectionArea >= (float)unionArea * threshold_) {
-    // ignore the smallest 
-    return rectArea > referenceArea ? 1 : 2;
+    // ignore the least likely face 
+    return rect.score > reference.score ? 1 : 2; // rectArea > referenceArea ? 1 : 2;
   }
   return 0;
 }
@@ -457,7 +457,7 @@ int ssdtest() {
 
     std::vector<int> labels(1, 0);
 
-    cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\ffld2\\data\\16088701753_28f5605db1_k.jpg", CV_LOAD_IMAGE_COLOR);
+    cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\ffld2\\data\\SAM_1246.JPG", CV_LOAD_IMAGE_COLOR);
     //cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\Pictures\\main_Autographer\\images\\2013-04-24\\b00000059_048875_20130424_000405e.jpg", CV_LOAD_IMAGE_COLOR);
  
     cv::Mat img;
@@ -468,7 +468,13 @@ int ssdtest() {
     int max_im_size = 2048;
     bool do_patches = true;
     int overlap = 50;
-    int net_img_size = 300;
+
+    const boost::shared_ptr<caffe::MemoryDataLayer<float> > memory_layer =
+      boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float> >(caffe_net.layer_by_name("data"));
+
+    int net_img_size = memory_layer->height();
+
+    LOG(INFO) << "Net input height " << net_img_size;
 
     if (oimg.cols > max_im_size) {
       sf = static_cast<float>(max_im_size) / static_cast<float>(oimg.cols);
@@ -562,9 +568,6 @@ int ssdtest() {
       else {
         netimgs.push_back(img);
       }
-
-      const boost::shared_ptr<caffe::MemoryDataLayer<float> > memory_layer =
-        boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float> >(caffe_net.layer_by_name("data"));
 
       memory_layer->AddMatVector(netimgs, labels);
 
