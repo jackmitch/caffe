@@ -341,9 +341,10 @@ RegisterBrewFunction(test);
 struct ImagePart {
   int offset_x;
   int offset_y;
-  float sf;
-  ImagePart() : offset_x(0), offset_y(0), sf(1.f) {}
-  ImagePart(int x, int y, float scale) : offset_x(x), offset_y(y), sf(scale) {}
+  float sfx;
+  float sfy;
+  ImagePart() : offset_x(0), offset_y(0), sfx(1.f), sfy(1.f) {}
+  ImagePart(int x, int y, float sx, float sy) : offset_x(x), offset_y(y), sfx(sx), sfy(sy) {}
 };
 
 struct FaceDetection {
@@ -457,7 +458,8 @@ int ssdtest() {
 
     std::vector<int> labels(1, 0);
 
-    cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\ffld2\\data\\SAM_1246.JPG", CV_LOAD_IMAGE_COLOR);
+    //cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\ffld2\\data\\20140614-162343-laura-andy-D7000-2359_4meg.jpg", CV_LOAD_IMAGE_COLOR);
+    cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\ffld2\\data\\test_fish2.jpg", CV_LOAD_IMAGE_COLOR);
     //cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\Pictures\\main_Autographer\\images\\2013-04-24\\b00000059_048875_20130424_000405e.jpg", CV_LOAD_IMAGE_COLOR);
  
     cv::Mat img;
@@ -469,9 +471,13 @@ int ssdtest() {
     bool do_patches = true;
     int overlap = 50;
 
-    const boost::shared_ptr<caffe::MemoryDataLayer<float> > memory_layer =
+    boost::shared_ptr<caffe::MemoryDataLayer<float> > memory_layer =
       boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float> >(caffe_net.layer_by_name("data"));
 
+    if (memory_layer == nullptr) {
+      memory_layer =
+        boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float> >(caffe_net.layer_by_name("memory_data_input")); 
+    }
     int net_img_size = memory_layer->height();
 
     LOG(INFO) << "Net input height " << net_img_size;
@@ -500,6 +506,11 @@ int ssdtest() {
 
     if (do_patches)
     {
+      // do the whole image as well as patches for selfies etc
+      sub_imgs.push_back(ImagePart());
+      sub_imgs[0].sfx = static_cast<float>(net_img_size) / static_cast<float>(img.cols);
+      sub_imgs[0].sfy = static_cast<float>(net_img_size) / static_cast<float>(img.rows);
+
       // build up the sub patches to process
       if (img.cols > net_img_size)
       {
@@ -565,8 +576,15 @@ int ssdtest() {
         rect.width = std::min<int>(net_img_size, img.cols - rect.x);
         rect.height = std::min<int>(net_img_size, img.rows - rect.y);
 
-        cv::Mat subimg = img(rect);
-        netimgs.push_back(subimg);
+        if (sub_imgs[n].sfx != 1.f || sub_imgs[n].sfy != 1.f) {
+          cv::Mat subimg;
+          cv::resize(img, subimg, cv::Size(), sub_imgs[n].sfx, sub_imgs[n].sfy);
+          netimgs.push_back(subimg);
+        }
+        else {
+          cv::Mat subimg = img(rect);
+          netimgs.push_back(subimg);
+        }
       }
       else {
         netimgs.push_back(img);
@@ -585,10 +603,10 @@ int ssdtest() {
       {
         FaceDetection det;
         det.score = result_vec[k + 2];
-        det.left = sub_imgs[n].offset_x + result_vec[k + 3] * netimgs[0].cols;
-        det.top = sub_imgs[n].offset_y + result_vec[k + 4] * netimgs[0].rows;
-        det.right = sub_imgs[n].offset_x + result_vec[k + 5] * netimgs[0].cols;
-        det.bottom = sub_imgs[n].offset_y + result_vec[k + 6] * netimgs[0].rows;
+        det.left = (sub_imgs[n].offset_x + result_vec[k + 3] * netimgs[0].cols) * (1.f/sub_imgs[n].sfx);
+        det.top = (sub_imgs[n].offset_y + result_vec[k + 4] * netimgs[0].rows) * (1.f / sub_imgs[n].sfy);
+        det.right = (sub_imgs[n].offset_x + result_vec[k + 5] * netimgs[0].cols) * (1.f / sub_imgs[n].sfx);
+        det.bottom = (sub_imgs[n].offset_y + result_vec[k + 6] * netimgs[0].rows) * (1.f / sub_imgs[n].sfy);
 
         // resize to original image dimensions
         det.left *= inv_sf;
