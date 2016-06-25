@@ -102,7 +102,7 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
   }
 
   if (num_kept == 0) {
-    LOG(INFO) << "Couldn't find any detections";
+    //LOG(INFO) << "Couldn't find any detections";
     return;
   }
   vector<int> top_shape(2, 1);
