@@ -266,7 +266,6 @@ int test() {
         caffe_net.Forward(&iter_loss);
     loss += iter_loss;
     int idx = 0;
-LOG(INFO) << "batch " << i;
 
     for (int j = 0; j < result.size(); ++j) {
       const float* result_vec = result[j]->cpu_data();
@@ -426,7 +425,7 @@ int ssdtest() {
     std::vector<int> labels(1, 0);
 
     //cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\ffld2\\data\\20140614-162343-laura-andy-D7000-2359_4meg.jpg", CV_LOAD_IMAGE_COLOR);
-    cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\ffld2\\data\\test_fish2.jpg", CV_LOAD_IMAGE_COLOR);
+    cv::Mat oimg = cv::imread("E:\\\\vgg_detector_errors\\IMG_1717.jpg", CV_LOAD_IMAGE_COLOR);
     //cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\Pictures\\main_Autographer\\images\\2013-04-24\\b00000059_048875_20130424_000405e.jpg", CV_LOAD_IMAGE_COLOR);
  
     cv::Mat img;
@@ -557,12 +556,13 @@ int ssdtest() {
         netimgs.push_back(img);
       }
 
+      LOG(INFO) << "Patch " << n << " " << sub_imgs[n].offset_x << " " << sub_imgs[n].offset_y;
+
       memory_layer->AddMatVector(netimgs, labels);
 
       const vector<Blob<float>*>& result = caffe_net.Forward(&iter_loss);
       loss += iter_loss;
       int idx = 0;
-      LOG(INFO) << "batch " << i;
 
       const float* result_vec = result[0]->cpu_data();
 

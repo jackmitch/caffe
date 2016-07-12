@@ -101,14 +101,16 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
     }
   }
 
-  if (num_kept == 0) {
-    //LOG(INFO) << "Couldn't find any detections";
-    return;
-  }
   vector<int> top_shape(2, 1);
   top_shape.push_back(num_kept);
   top_shape.push_back(7);
   top[0]->Reshape(top_shape);
+
+  if (num_kept == 0) {
+    //LOG(INFO) << "Couldn't find any detections";
+    return;
+  }
+
   Dtype* top_data = top[0]->mutable_cpu_data();
   const Dtype* bbox_cpu_data = bbox_preds.cpu_data();
 
