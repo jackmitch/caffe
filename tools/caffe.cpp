@@ -44,6 +44,8 @@ DEFINE_string(snapshot, "",
 DEFINE_string(weights, "",
     "Optional; the pretrained weights to initialize finetuning, "
     "separated by ','. Cannot be set simultaneously with snapshot.");
+DEFINE_string(ssd_test_image, "",
+    "Optional; an image to use by sddtest");
 DEFINE_int32(iterations, 50,
     "The number of iterations to run.");
 DEFINE_string(sigint_effect, "stop",
@@ -309,19 +311,32 @@ struct ImagePart {
   int offset_y;
   float sfx;
   float sfy;
-  ImagePart() : offset_x(0), offset_y(0), sfx(1.f), sfy(1.f) {}
-  ImagePart(int x, int y, float sx, float sy) : offset_x(x), offset_y(y), sfx(sx), sfy(sy) {}
+  ImagePart() : 
+    offset_x(0), offset_y(0), sfx(1.f), sfy(1.f) {}
+  ImagePart(int x, int y, float sx, float sy) : 
+    offset_x(x), offset_y(y), sfx(sx), sfy(sy) {}
 };
 
 struct FaceDetection {
   bool ignore;
   float score;
+  float scale; // image scale at which the face was detected
   int left, top, bottom, right;
   FaceDetection() : ignore(false), score(0.f) {}
 };
 
 // return 1 if reference should be ignore, 2 if rect should be ignored and 0 if neither should be ignored
 int intersect(const FaceDetection& reference, const FaceDetection& rect) {
+
+  if (reference.scale < rect.scale) {
+    // if reference was found at a smaller scale don't allow any boxes inside of it
+    if (rect.left >= reference.left &&
+      rect.right <= reference.right &&
+      rect.top >= reference.top &&
+      rect.bottom <= reference.bottom) {
+      return 2;
+    }
+  }
 
   const int left = std::max(reference.left, rect.left);
   const int right = std::min(reference.right, rect.right);
@@ -345,7 +360,12 @@ int intersect(const FaceDetection& reference, const FaceDetection& rect) {
 
   if ((float)intersectionArea >= (float)unionArea * threshold_) {
     // ignore the least likely face 
-    return rect.score > reference.score ? 1 : 2; // rectArea > referenceArea ? 1 : 2;
+    if (rect.scale != reference.scale) {
+      return rect.scale < reference.scale ? 1 : 2;
+    }
+    else {
+      return rect.score > reference.score ? 1 : 2; // rectArea > referenceArea ? 1 : 2;
+    }
   }
   return 0;
 }
@@ -424,9 +444,7 @@ int ssdtest() {
 
     std::vector<int> labels(1, 0);
 
-    //cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\ffld2\\data\\20140614-162343-laura-andy-D7000-2359_4meg.jpg", CV_LOAD_IMAGE_COLOR);
-    cv::Mat oimg = cv::imread("E:\\\\vgg_detector_errors\\IMG_1717.jpg", CV_LOAD_IMAGE_COLOR);
-    //cv::Mat oimg = cv::imread("C:\\\\Users\\JLeigh\\Pictures\\main_Autographer\\images\\2013-04-24\\b00000059_048875_20130424_000405e.jpg", CV_LOAD_IMAGE_COLOR);
+    cv::Mat oimg = cv::imread(FLAGS_ssd_test_image, CV_LOAD_IMAGE_COLOR);
  
     cv::Mat img;
 
@@ -472,7 +490,7 @@ int ssdtest() {
 
     if (do_patches)
     {
-      // do the whole image as well as patches for selfies etc
+      // do the whole image as well as patches for selfies and large faces etc
       sub_imgs.push_back(ImagePart());
       sub_imgs[0].sfx = static_cast<float>(net_img_size) / static_cast<float>(img.cols);
       sub_imgs[0].sfy = static_cast<float>(net_img_size) / static_cast<float>(img.rows);
@@ -570,18 +588,23 @@ int ssdtest() {
       {
         FaceDetection det;
         det.score = result_vec[k + 2];
-        det.left = (sub_imgs[n].offset_x + result_vec[k + 3] * netimgs[0].cols) * (1.f/sub_imgs[n].sfx);
-        det.top = (sub_imgs[n].offset_y + result_vec[k + 4] * netimgs[0].rows) * (1.f / sub_imgs[n].sfy);
-        det.right = (sub_imgs[n].offset_x + result_vec[k + 5] * netimgs[0].cols) * (1.f / sub_imgs[n].sfx);
-        det.bottom = (sub_imgs[n].offset_y + result_vec[k + 6] * netimgs[0].rows) * (1.f / sub_imgs[n].sfy);
 
-        // resize to original image dimensions
-        det.left *= inv_sf;
-        det.right *= inv_sf;
-        det.top *= inv_sf;
-        det.bottom *= inv_sf;
+        if (det.score >= detection_threshold)
+        {
+          det.scale = std::min<float>(sub_imgs[n].sfx, sub_imgs[n].sfy);
+          det.left = (sub_imgs[n].offset_x + result_vec[k + 3] * netimgs[0].cols) * (1.f / sub_imgs[n].sfx);
+          det.top = (sub_imgs[n].offset_y + result_vec[k + 4] * netimgs[0].rows) * (1.f / sub_imgs[n].sfy);
+          det.right = (sub_imgs[n].offset_x + result_vec[k + 5] * netimgs[0].cols) * (1.f / sub_imgs[n].sfx);
+          det.bottom = (sub_imgs[n].offset_y + result_vec[k + 6] * netimgs[0].rows) * (1.f / sub_imgs[n].sfy);
 
-        detections.insert(std::make_pair(det.score, det));
+          // resize to original image dimensions
+          det.left *= inv_sf;
+          det.right *= inv_sf;
+          det.top *= inv_sf;
+          det.bottom *= inv_sf;
+
+          detections.insert(std::make_pair(det.score, det));
+        }
       }
     } // all imgage parts
 
@@ -610,7 +633,7 @@ int ssdtest() {
       }
     }
 
-    imwrite("C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\visp\\caffe\\build\\output.jpg", oimg);
+    imwrite("ssd_detector_result.jpg", oimg);
   }
   loss /= FLAGS_iterations;
   LOG(INFO) << "Loss: " << loss;
