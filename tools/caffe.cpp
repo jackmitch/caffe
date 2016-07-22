@@ -53,6 +53,8 @@ DEFINE_string(weights, "",
     "separated by ','. Cannot be set simultaneously with snapshot.");
 DEFINE_string(ssd_test_image, "",
     "Optional; an image to use by sddtest");
+DEFINE_int32(ssd_label, -1,
+    "Optional; label id to output results for, -1 means all");
 DEFINE_int32(iterations, 50,
     "The number of iterations to run.");
 DEFINE_string(sigint_effect, "stop",
@@ -350,16 +352,17 @@ struct ImagePart {
     offset_x(x), offset_y(y), sfx(sx), sfy(sy) {}
 };
 
-struct FaceDetection {
+struct ObjectDetection {
   bool ignore;
   float score;
   float scale; // image scale at which the face was detected
   int left, top, bottom, right;
-  FaceDetection() : ignore(false), score(0.f) {}
+  int label;
+  ObjectDetection() : ignore(false), score(0.f), label(-1) {}
 };
 
 // return 1 if reference should be ignore, 2 if rect should be ignored and 0 if neither should be ignored
-int intersect(const FaceDetection& reference, const FaceDetection& rect) {
+int intersect(const ObjectDetection& reference, const ObjectDetection& rect) {
 
   if (reference.scale < rect.scale) {
     // if reference was found at a smaller scale don't allow any boxes inside of it
@@ -403,11 +406,11 @@ int intersect(const FaceDetection& reference, const FaceDetection& rect) {
   return 0;
 }
 
-void nonMaximaSuppression_(std::map<float, FaceDetection>& detections)
+void nonMaximaSuppression_(std::map<float, ObjectDetection>& detections)
 {
   // Non maxima suppression
-  typedef std::map<float, FaceDetection>::reverse_iterator RFaceItr;
-  typedef std::map<float, FaceDetection>::iterator FaceItr;
+  typedef std::map<float, ObjectDetection>::reverse_iterator RFaceItr;
+  typedef std::map<float, ObjectDetection>::iterator FaceItr;
 
   for (RFaceItr i = detections.rbegin(); i != detections.rend(); i++) {
 
@@ -485,7 +488,7 @@ int ssdtest() {
     float sf = 1.0;
     float detection_threshold = 0.15f;
     int max_im_size = 2048;
-    bool do_patches = true;
+    bool do_patches = false;
     int overlap = 50;
 
     boost::shared_ptr<caffe::MemoryDataLayer<float> > memory_layer =
@@ -495,9 +498,11 @@ int ssdtest() {
       memory_layer =
         boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float> >(caffe_net.layer_by_name("memory_data_input")); 
     }
-    int net_img_size = memory_layer->height();
 
-    LOG(INFO) << "Net input height " << net_img_size;
+    int net_img_height = memory_layer->height();
+    int net_img_width = memory_layer->width();
+
+    LOG(INFO) << "Net input image size " << net_img_width << "x" << net_img_height;
 
     if (oimg.cols > max_im_size) {
       sf = static_cast<float>(max_im_size) / static_cast<float>(oimg.cols);
@@ -507,7 +512,7 @@ int ssdtest() {
       if (sf2 < sf) sf = sf2;
     }
 
-    if (sf == 1.0) {
+    if (!do_patches || sf == 1.0) {
       img = oimg;
     }
     else {
@@ -516,31 +521,32 @@ int ssdtest() {
 
     float inv_sf = 1.0 / sf;
 
-    std::map<float, FaceDetection> detections;
-    typedef std::map<float, FaceDetection>::reverse_iterator RFaceItr; 
+    std::map<float, ObjectDetection> detections;
+    typedef std::map<float, ObjectDetection>::reverse_iterator RObjItr;
 
     std::vector<ImagePart> sub_imgs;
 
     if (do_patches)
     {
-      // do the whole image as well as patches for selfies and large faces etc
+      // do the whole image as well as patches for selfies and large faces etc, take account of scale
+      // here for resizing detections to original image size, as net will internally resize to net_img_width etc 
       sub_imgs.push_back(ImagePart());
-      sub_imgs[0].sfx = static_cast<float>(net_img_size) / static_cast<float>(img.cols);
-      sub_imgs[0].sfy = static_cast<float>(net_img_size) / static_cast<float>(img.rows);
+      sub_imgs[0].sfx = static_cast<float>(net_img_width) / static_cast<float>(img.cols);
+      sub_imgs[0].sfy = static_cast<float>(net_img_height) / static_cast<float>(img.rows);
 
       // build up the sub patches to process
-      if (img.cols > net_img_size)
+      if (img.cols > net_img_width)
       {
         int startx = 0;
-        int endx = net_img_size;
+        int endx = net_img_width;
         while (startx < img.cols)
         {
           ImagePart part;
           part.offset_x = startx;
-          startx += net_img_size - overlap;
-          endx = startx + net_img_size;
-          if (img.cols - part.offset_x < net_img_size) {
-            part.offset_x = img.cols - net_img_size;
+          startx += net_img_width - overlap;
+          endx = startx + net_img_width;
+          if (img.cols - part.offset_x < net_img_width) {
+            part.offset_x = img.cols - net_img_width;
           }
           sub_imgs.push_back(part);
         }
@@ -549,13 +555,13 @@ int ssdtest() {
         sub_imgs.push_back(ImagePart());
       }
 
-      if (img.rows > net_img_size)
+      if (img.rows > net_img_height)
       {
         int count = sub_imgs.size();
 
         for (int n = 0; n < count; n++)
         {
-          int starty = net_img_size - overlap;
+          int starty = net_img_height - overlap;
           int last_endy = 0;
 
           while (last_endy < img.rows)
@@ -563,13 +569,13 @@ int ssdtest() {
             ImagePart part;
             part.offset_y = starty;
             part.offset_x = sub_imgs[n].offset_x;
-            if (img.rows - part.offset_y < net_img_size) {
-              part.offset_y = img.rows - net_img_size;
+            if (img.rows - part.offset_y < net_img_height) {
+              part.offset_y = img.rows - net_img_height;
             }
             sub_imgs.push_back(part);
 
-            last_endy = starty + net_img_size;
-            starty += net_img_size - overlap;
+            last_endy = starty + net_img_height;
+            starty += net_img_height - overlap;
           }
         }
       }
@@ -590,8 +596,8 @@ int ssdtest() {
         cv::Rect rect;
         rect.x = std::max(0, sub_imgs[n].offset_x);
         rect.y = std::max(0, sub_imgs[n].offset_y);
-        rect.width = std::min<int>(net_img_size, img.cols - rect.x);
-        rect.height = std::min<int>(net_img_size, img.rows - rect.y);
+        rect.width = std::min<int>(net_img_width, img.cols - rect.x);
+        rect.height = std::min<int>(net_img_height, img.rows - rect.y);
 
         if (sub_imgs[n].sfx != 1.f || sub_imgs[n].sfy != 1.f) {
           cv::Mat subimg;
@@ -619,10 +625,11 @@ int ssdtest() {
 
       for (int k = 0; k < result[0]->count(); k += 7) 
       {
-        FaceDetection det;
+        ObjectDetection det;
         det.score = result_vec[k + 2];
+        det.label = result_vec[k + 1];
 
-        if (det.score >= detection_threshold)
+        if (det.score >= detection_threshold && (det.label == FLAGS_ssd_label || FLAGS_ssd_label < 0))
         {
           det.scale = std::min<float>(sub_imgs[n].sfx, sub_imgs[n].sfy);
           det.left = (sub_imgs[n].offset_x + result_vec[k + 3] * netimgs[0].cols) * (1.f / sub_imgs[n].sfx);
@@ -644,7 +651,7 @@ int ssdtest() {
     netTimer.Stop();
     LOG(INFO) << "Time to process image " << netTimer.MilliSeconds() << " msec";
 
-    for (RFaceItr it = detections.rbegin(); it != detections.rend(); it++) {
+    for (RObjItr it = detections.rbegin(); it != detections.rend(); it++) {
       if (it->first < detection_threshold) {
         it->second.ignore = true;
       }
@@ -652,11 +659,25 @@ int ssdtest() {
 
     nonMaximaSuppression_(detections);
 
+    // draw the patches
+/*    if (do_patches)
+    {
+      for (size_t n = 0; n < sub_imgs.size(); n++)
+      {
+        int x = (1.f / sf) * std::max<int>(0, sub_imgs[n].offset_x);
+        int y = (1.f / sf) * std::max<int>(0, sub_imgs[n].offset_y);
+        int x0 = std::min<int>(oimg.cols, x + (1.f / sf) * net_img_size);
+        int y0 = std::min<int>(oimg.rows, y + (1.f / sf) * net_img_size);
+        cv::rectangle(oimg, cv::Point(x,y), cv::Point(x0, y0), cv::Scalar(0, 255, 0), 4);
+      }
+    }
+*/
     // draw the top detections
     int cnt = 0;
-    for (RFaceItr it = detections.rbegin(); it != detections.rend(); it++, cnt++) {
+    for (RObjItr it = detections.rbegin(); it != detections.rend(); it++, cnt++) {
       if (it->first > detection_threshold) {
-        LOG(INFO) << "Box score " << it->first << " x: " << it->second.left << " y: " << it->second.top;
+        LOG(INFO) << "Box label " << it->second.label << " score " << it->first << 
+          " x: " << it->second.left << " y: " << it->second.top;
         cv::Point p0(it->second.left, it->second.top);
         cv::Point p1(it->second.right, it->second.bottom);
         cv::rectangle(oimg, p0, p1, cv::Scalar(0, 0, 255), 4);
