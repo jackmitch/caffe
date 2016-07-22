@@ -63,7 +63,7 @@ for cid in cid_img_map:
     num_pos_pairs[cid] = len(list(itertools.combinations(cid_img_map[cid], 2))) + len(cid_img_map[cid])
     total_pos_pairs = total_pos_pairs + num_pos_pairs[cid]
 
-subsample = min(1.0, float(max_training_set_size) / (total_pos_pairs * 2))
+subsample = min(1.0, float(max_training_set_size) / (total_pos_pairs * 3))
 
 # select training pairs 
 all_pos_pairs = []
