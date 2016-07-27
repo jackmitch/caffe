@@ -239,7 +239,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   // Handle force_backward if needed.
   if (param.force_backward()) {
     for (int layer_id = 0; layer_id < layers_.size(); ++layer_id) {
-      layer_need_backward_[layer_id] = true;
+      layer_need_backward_[layer_id] = layers_[layer_id]->AllowForceBackward(-1);
       for (int bottom_id = 0;
            bottom_id < bottom_need_backward_[layer_id].size(); ++bottom_id) {
         bottom_need_backward_[layer_id][bottom_id] =
@@ -249,6 +249,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
             blob_need_backward_[bottom_id_vecs_[layer_id][bottom_id]] ||
             bottom_need_backward_[layer_id][bottom_id];
       }
+
       for (int param_id = 0; param_id < layers_[layer_id]->blobs().size();
            ++param_id) {
         layers_[layer_id]->set_param_propagate_down(param_id, true);
@@ -427,12 +428,11 @@ int Net<Dtype>::AppendBottom(const NetParameter& param, const int layer_id,
   bottom_vecs_[layer_id].push_back(blobs_[blob_id].get());
   bottom_id_vecs_[layer_id].push_back(blob_id);
   available_blobs->erase(blob_name);
-  bool propagate_down = true;
+  bool need_backward = blob_need_backward_[blob_id];
   // Check if the backpropagation on bottom_id should be skipped
-  if (layer_param.propagate_down_size() > 0)
-    propagate_down = layer_param.propagate_down(bottom_id);
-  const bool need_backward = blob_need_backward_[blob_id] &&
-                          propagate_down;
+  if (layer_param.propagate_down_size() > 0) {
+    need_backward = layer_param.propagate_down(bottom_id);
+  }
   bottom_need_backward_[layer_id].push_back(need_backward);
   return blob_id;
 }
@@ -592,6 +592,19 @@ void Net<Dtype>::BackwardFromTo(int start, int end) {
 }
 
 template <typename Dtype>
+void Net<Dtype>::DeconvFromTo(int start, int end) {
+  CHECK_GE(end, 0);
+  CHECK_LT(start, layers_.size());
+  for (int i = start; i >= end; --i) {
+    if (layer_need_backward_[i]) {
+      layers_[i]->Deconv(
+          top_vecs_[i], bottom_need_backward_[i], bottom_vecs_[i]);
+      if (debug_info_) { DeconvDebugInfo(i); }
+    }
+  }
+}
+
+template <typename Dtype>
 void Net<Dtype>::ForwardDebugInfo(const int layer_id) {
   for (int top_id = 0; top_id < top_vecs_[layer_id].size(); ++top_id) {
     const Blob<Dtype>& blob = *top_vecs_[layer_id][top_id];
@@ -640,6 +653,29 @@ void Net<Dtype>::BackwardDebugInfo(const int layer_id) {
         << "    [Backward] "
         << "Layer " << layer_names_[layer_id]
         << ", param blob " << param_id
+        << " diff: " << diff_abs_val_mean;
+  }
+}
+
+template <typename Dtype>
+void Net<Dtype>::DeconvDebugInfo(const int layer_id) {
+  const vector<Blob<Dtype>*>& bottom_vec = bottom_vecs_[layer_id];
+  for (int bottom_id = 0; bottom_id < bottom_vec.size(); ++bottom_id) {
+    if (!bottom_need_backward_[layer_id][bottom_id]) { continue; }
+    const Blob<Dtype>& blob = *bottom_vec[bottom_id];
+    const string& blob_name = blob_names_[bottom_id_vecs_[layer_id][bottom_id]];
+    const Dtype diff_abs_val_mean = blob.asum_diff() / blob.count();
+    LOG(INFO) << "    [Deconv] "
+        << "Layer " << layer_names_[layer_id] << ", bottom blob " << blob_name
+        << " diff: " << diff_abs_val_mean;
+  }
+  for (int param_id = 0; param_id < layers_[layer_id]->blobs().size();
+       ++param_id) {
+    if (!layers_[layer_id]->param_propagate_down(param_id)) { continue; }
+    const Blob<Dtype>& blob = *layers_[layer_id]->blobs()[param_id];
+    const Dtype diff_abs_val_mean = blob.asum_diff() / blob.count();
+    LOG(INFO) << "    [Deconv] "
+        << "Layer " << layer_names_[layer_id] << ", param blob " << param_id
         << " diff: " << diff_abs_val_mean;
   }
 }
@@ -729,6 +765,21 @@ void Net<Dtype>::Backward() {
                << "L1 norm = (" << asum_data << ", " << asum_diff << "); "
                << "L2 norm = (" << l2norm_data << ", " << l2norm_diff << ")";
   }
+}
+
+template <typename Dtype>
+void Net<Dtype>::DeconvFrom(int start) {
+  DeconvFromTo(start, 0);
+}
+
+template <typename Dtype>
+void Net<Dtype>::DeconvTo(int end) {
+  DeconvFromTo(layers_.size() - 1, end);
+}
+
+template <typename Dtype>
+void Net<Dtype>::Deconv() {
+  DeconvFromTo(layers_.size() - 1, 0);
 }
 
 template <typename Dtype>

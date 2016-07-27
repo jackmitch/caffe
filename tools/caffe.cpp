@@ -15,6 +15,11 @@ namespace bp = boost::python;
 #include "caffe/caffe.hpp"
 #include "caffe/util/signal_handler.h"
 
+#ifdef _MSC_VER
+#include "caffe/layers/memory_data_layer.hpp"
+#include <opencv2/opencv.hpp>
+#endif
+
 using caffe::Blob;
 using caffe::Caffe;
 using caffe::Net;
@@ -33,12 +38,16 @@ DEFINE_string(gpu, "",
 DEFINE_string(solver, "",
     "The solver definition protocol buffer text file.");
 DEFINE_string(model, "",
-    "The model definition protocol buffer text file..");
+    "The model definition protocol buffer text file.");
 DEFINE_string(snapshot, "",
     "Optional; the snapshot solver state to resume training.");
 DEFINE_string(weights, "",
     "Optional; the pretrained weights to initialize finetuning, "
     "separated by ','. Cannot be set simultaneously with snapshot.");
+DEFINE_string(ssd_test_image, "",
+    "Optional; an image to use by sddtest");
+DEFINE_int32(ssd_label, -1,
+    "Optional; label id to output results for, -1 means all");
 DEFINE_int32(iterations, 50,
     "The number of iterations to run.");
 DEFINE_string(sigint_effect, "stop",
@@ -261,6 +270,7 @@ int test() {
         caffe_net.Forward(&iter_loss);
     loss += iter_loss;
     int idx = 0;
+
     for (int j = 0; j < result.size(); ++j) {
       const float* result_vec = result[j]->cpu_data();
       for (int k = 0; k < result[j]->count(); ++k, ++idx) {
@@ -297,6 +307,374 @@ int test() {
 }
 RegisterBrewFunction(test);
 
+#ifdef _MSC_VER
+struct ImagePart {
+  int offset_x;
+  int offset_y;
+  float sfx;
+  float sfy;
+  ImagePart() : 
+    offset_x(0), offset_y(0), sfx(1.f), sfy(1.f) {}
+  ImagePart(int x, int y, float sx, float sy) : 
+    offset_x(x), offset_y(y), sfx(sx), sfy(sy) {}
+};
+
+struct ObjectDetection {
+  bool ignore;
+  float score;
+  float scale; // image scale at which the face was detected
+  int left, top, bottom, right;
+  int label;
+  ObjectDetection() : ignore(false), score(0.f), label(-1) {}
+};
+
+// return 1 if reference should be ignore, 2 if rect should be ignored and 0 if neither should be ignored
+int intersect(const ObjectDetection& reference, const ObjectDetection& rect) {
+
+  if (reference.scale < rect.scale) {
+    // if reference was found at a smaller scale don't allow any boxes inside of it
+    if (rect.left >= reference.left &&
+      rect.right <= reference.right &&
+      rect.top >= reference.top &&
+      rect.bottom <= reference.bottom) {
+      return 2;
+    }
+  }
+
+  const int left = std::max(reference.left, rect.left);
+  const int right = std::min(reference.right, rect.right);
+
+  if (right < left)
+    return 0;
+
+  const int top = std::max(reference.top, rect.top);
+  const int bottom = std::min(reference.bottom, rect.bottom);
+
+  if (bottom < top)
+    return 0;
+
+  const int intersectionArea = (right - left + 1) * (bottom - top + 1);
+  const int rectArea = (rect.right - rect.left) * (rect.bottom - rect.top);
+
+  const int referenceArea = (reference.right - reference.left) * (reference.bottom - reference.top);
+  const int unionArea = referenceArea + rectArea - intersectionArea;
+
+  float threshold_ = 0.2f;
+
+  if ((float)intersectionArea >= (float)unionArea * threshold_) {
+    // ignore the least likely face 
+    if (rect.scale != reference.scale) {
+      return rect.scale < reference.scale ? 1 : 2;
+    }
+    else {
+      return rect.score > reference.score ? 1 : 2; // rectArea > referenceArea ? 1 : 2;
+    }
+  }
+  return 0;
+}
+
+void nonMaximaSuppression_(std::map<float, ObjectDetection>& detections)
+{
+  // Non maxima suppression
+  typedef std::map<float, ObjectDetection>::reverse_iterator RFaceItr;
+  typedef std::map<float, ObjectDetection>::iterator FaceItr;
+
+  for (RFaceItr i = detections.rbegin(); i != detections.rend(); i++) {
+
+    if (i->second.ignore) continue;
+
+    // find any other overlapping box
+    for (RFaceItr j = detections.rbegin(); j != detections.rend(); j++) {
+      if (j != i && !j->second.ignore && !i->second.ignore)
+      {
+        int it = intersect(i->second, j->second);
+        if (it == 1) {
+          i->second.ignore = true;
+          break;
+        }
+        else if (it == 2) {
+          j->second.ignore = true;
+        }
+      }
+    }
+  }
+
+  // clean up detections
+  for (FaceItr q = detections.begin(); q != detections.end(); ) {
+    if (q->second.ignore) {
+      detections.erase(q);
+      q = detections.begin();
+    }
+    else {
+      q++;
+    }
+  }
+}
+#endif
+
+int ssdtest() {
+  CHECK_GT(FLAGS_model.size(), 0) << "Need a model definition to score.";
+  CHECK_GT(FLAGS_weights.size(), 0) << "Need model weights to score.";
+
+#ifdef _MSC_VER
+  // Set device id and mode
+  vector<int> gpus;
+  get_gpus(&gpus);
+  if (gpus.size() != 0) {
+    LOG(INFO) << "Use GPU with device ID " << gpus[0];
+#ifndef CPU_ONLY
+    cudaDeviceProp device_prop;
+    cudaGetDeviceProperties(&device_prop, gpus[0]);
+    LOG(INFO) << "GPU device name: " << device_prop.name;
+#endif
+    Caffe::SetDevice(gpus[0]);
+    Caffe::set_mode(Caffe::GPU);
+  }
+  else {
+    LOG(INFO) << "Use CPU.";
+    Caffe::set_mode(Caffe::CPU);
+  }
+  // Instantiate the caffe net.
+  Net<float> caffe_net(FLAGS_model, caffe::TEST);
+  caffe_net.CopyTrainedLayersFrom(FLAGS_weights);
+  LOG(INFO) << "Running for " << FLAGS_iterations << " iterations.";
+
+  vector<int> test_score_output_id;
+  vector<float> test_score;
+  float loss = 0;
+  for (int i = 0; i < FLAGS_iterations; ++i) {
+    float iter_loss;
+
+    std::vector<int> labels(1, 0);
+
+    cv::Mat oimg = cv::imread(FLAGS_ssd_test_image, CV_LOAD_IMAGE_COLOR);
+ 
+    cv::Mat img;
+
+    // ensure image is below max_im_size_
+    float sf = 1.0;
+    float detection_threshold = 0.15f;
+    int max_im_size = 2048;
+    bool do_patches = false;
+    int overlap = 50;
+
+    boost::shared_ptr<caffe::MemoryDataLayer<float> > memory_layer =
+      boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float> >(caffe_net.layer_by_name("data"));
+
+    if (memory_layer == nullptr) {
+      memory_layer =
+        boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float> >(caffe_net.layer_by_name("memory_data_input")); 
+    }
+
+    int net_img_height = memory_layer->height();
+    int net_img_width = memory_layer->width();
+
+    LOG(INFO) << "Net input image size " << net_img_width << "x" << net_img_height;
+
+    if (oimg.cols > max_im_size) {
+      sf = static_cast<float>(max_im_size) / static_cast<float>(oimg.cols);
+    }
+    if (oimg.rows > max_im_size) {
+      float sf2 = static_cast<float>(max_im_size) / static_cast<float>(oimg.rows);
+      if (sf2 < sf) sf = sf2;
+    }
+
+    if (!do_patches || sf == 1.0) {
+      img = oimg;
+    }
+    else {
+      cv::resize(oimg, img, cv::Size(), sf, sf);
+    }
+
+    float inv_sf = 1.0 / sf;
+
+    std::map<float, ObjectDetection> detections;
+    typedef std::map<float, ObjectDetection>::reverse_iterator RObjItr;
+
+    std::vector<ImagePart> sub_imgs;
+
+    if (do_patches)
+    {
+      // do the whole image as well as patches for selfies and large faces etc, take account of scale
+      // here for resizing detections to original image size, as net will internally resize to net_img_width etc 
+      sub_imgs.push_back(ImagePart());
+      sub_imgs[0].sfx = static_cast<float>(net_img_width) / static_cast<float>(img.cols);
+      sub_imgs[0].sfy = static_cast<float>(net_img_height) / static_cast<float>(img.rows);
+
+      // build up the sub patches to process
+      if (img.cols > net_img_width)
+      {
+        int startx = 0;
+        int endx = net_img_width;
+        while (startx < img.cols)
+        {
+          ImagePart part;
+          part.offset_x = startx;
+          startx += net_img_width - overlap;
+          endx = startx + net_img_width;
+          if (img.cols - part.offset_x < net_img_width) {
+            part.offset_x = img.cols - net_img_width;
+          }
+          sub_imgs.push_back(part);
+        }
+      }
+      else {
+        sub_imgs.push_back(ImagePart());
+      }
+
+      if (img.rows > net_img_height)
+      {
+        int count = sub_imgs.size();
+
+        for (int n = 0; n < count; n++)
+        {
+          int starty = net_img_height - overlap;
+          int last_endy = 0;
+
+          while (last_endy < img.rows)
+          {
+            ImagePart part;
+            part.offset_y = starty;
+            part.offset_x = sub_imgs[n].offset_x;
+            if (img.rows - part.offset_y < net_img_height) {
+              part.offset_y = img.rows - net_img_height;
+            }
+            sub_imgs.push_back(part);
+
+            last_endy = starty + net_img_height;
+            starty += net_img_height - overlap;
+          }
+        }
+      }
+    }
+    else {
+      sub_imgs.push_back(ImagePart());
+    }
+
+    Timer netTimer;
+    netTimer.Start();
+
+    for (size_t n = 0; n < sub_imgs.size(); n++)
+    {
+      std::vector<cv::Mat> netimgs;
+
+      if (do_patches)
+      {
+        cv::Rect rect;
+        rect.x = std::max(0, sub_imgs[n].offset_x);
+        rect.y = std::max(0, sub_imgs[n].offset_y);
+        rect.width = std::min<int>(net_img_width, img.cols - rect.x);
+        rect.height = std::min<int>(net_img_height, img.rows - rect.y);
+
+        if (sub_imgs[n].sfx != 1.f || sub_imgs[n].sfy != 1.f) {
+          cv::Mat subimg;
+          cv::resize(img, subimg, cv::Size(), sub_imgs[n].sfx, sub_imgs[n].sfy);
+          netimgs.push_back(subimg);
+        }
+        else {
+          cv::Mat subimg = img(rect);
+          netimgs.push_back(subimg);
+        }
+      }
+      else {
+        netimgs.push_back(img);
+      }
+
+      LOG(INFO) << "Patch " << n << " " << sub_imgs[n].offset_x << " " << sub_imgs[n].offset_y;
+
+      memory_layer->AddMatVector(netimgs, labels);
+
+      const vector<Blob<float>*>& result = caffe_net.Forward(&iter_loss);
+      loss += iter_loss;
+      int idx = 0;
+
+      const float* result_vec = result[0]->cpu_data();
+
+      for (int k = 0; k < result[0]->count(); k += 7) 
+      {
+        ObjectDetection det;
+        det.score = result_vec[k + 2];
+        det.label = result_vec[k + 1];
+
+        if (det.score >= detection_threshold && (det.label == FLAGS_ssd_label || FLAGS_ssd_label < 0))
+        {
+          det.scale = std::min<float>(sub_imgs[n].sfx, sub_imgs[n].sfy);
+          det.left = (sub_imgs[n].offset_x + result_vec[k + 3] * netimgs[0].cols) * (1.f / sub_imgs[n].sfx);
+          det.top = (sub_imgs[n].offset_y + result_vec[k + 4] * netimgs[0].rows) * (1.f / sub_imgs[n].sfy);
+          det.right = (sub_imgs[n].offset_x + result_vec[k + 5] * netimgs[0].cols) * (1.f / sub_imgs[n].sfx);
+          det.bottom = (sub_imgs[n].offset_y + result_vec[k + 6] * netimgs[0].rows) * (1.f / sub_imgs[n].sfy);
+
+          // resize to original image dimensions
+          det.left *= inv_sf;
+          det.right *= inv_sf;
+          det.top *= inv_sf;
+          det.bottom *= inv_sf;
+
+          detections.insert(std::make_pair(det.score, det));
+        }
+      }
+    } // all imgage parts
+
+    netTimer.Stop();
+    LOG(INFO) << "Time to process image " << netTimer.MilliSeconds() << " msec";
+
+    for (RObjItr it = detections.rbegin(); it != detections.rend(); it++) {
+      if (it->first < detection_threshold) {
+        it->second.ignore = true;
+      }
+    }
+
+    nonMaximaSuppression_(detections);
+
+    // draw the patches
+/*    if (do_patches)
+    {
+      for (size_t n = 0; n < sub_imgs.size(); n++)
+      {
+        int x = (1.f / sf) * std::max<int>(0, sub_imgs[n].offset_x);
+        int y = (1.f / sf) * std::max<int>(0, sub_imgs[n].offset_y);
+        int x0 = std::min<int>(oimg.cols, x + (1.f / sf) * net_img_size);
+        int y0 = std::min<int>(oimg.rows, y + (1.f / sf) * net_img_size);
+        cv::rectangle(oimg, cv::Point(x,y), cv::Point(x0, y0), cv::Scalar(0, 255, 0), 4);
+      }
+    }
+*/
+    // draw the top detections
+    int cnt = 0;
+    for (RObjItr it = detections.rbegin(); it != detections.rend(); it++, cnt++) {
+      if (it->first > detection_threshold) {
+        LOG(INFO) << "Box label " << it->second.label << " score " << it->first << 
+          " x: " << it->second.left << " y: " << it->second.top;
+        cv::Point p0(it->second.left, it->second.top);
+        cv::Point p1(it->second.right, it->second.bottom);
+        cv::rectangle(oimg, p0, p1, cv::Scalar(0, 0, 255), 4);
+      }
+      else {
+        break;
+      }
+    }
+
+    imwrite("ssd_detector_result.jpg", oimg);
+  }
+  loss /= FLAGS_iterations;
+  LOG(INFO) << "Loss: " << loss;
+  for (int i = 0; i < test_score.size(); ++i) {
+    const std::string& output_name = caffe_net.blob_names()[
+      caffe_net.output_blob_indices()[test_score_output_id[i]]];
+    const float loss_weight = caffe_net.blob_loss_weights()[
+      caffe_net.output_blob_indices()[test_score_output_id[i]]];
+    std::ostringstream loss_msg_stream;
+    const float mean_score = test_score[i] / FLAGS_iterations;
+    if (loss_weight) {
+      loss_msg_stream << " (* " << loss_weight
+        << " = " << loss_weight * mean_score << " loss)";
+    }
+    LOG(INFO) << output_name << " = " << mean_score << loss_msg_stream.str();
+  }
+#endif
+  return 0;
+}
+RegisterBrewFunction(ssdtest);
 
 // Time: benchmark the execution time of a model.
 int time() {

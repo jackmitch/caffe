@@ -1,65 +1,154 @@
-# Windows Caffe
+# SSD: Single Shot MultiBox Detector
 
-**This is an experimental, Microsoft-led branch by Pavle Josipovic (@pavlejosipovic). It is a work-in-progress.**
+By [Wei Liu](http://www.cs.unc.edu/~wliu/), [Dragomir Anguelov](http://research.google.com/pubs/DragomirAnguelov.html), [Dumitru Erhan](http://research.google.com/pubs/DumitruErhan.html), [Christian Szegedy](http://research.google.com/pubs/ChristianSzegedy.html), [Scott Reed](http://www-personal.umich.edu/~reedscot/), Cheng-Yang Fu, [Alexander C. Berg](http://acberg.com).
 
-This branch of Caffe ports the framework to Windows.
+### Introduction
 
-[![Travis Build Status](https://api.travis-ci.org/BVLC/caffe.svg?branch=windows)](https://travis-ci.org/BVLC/caffe) Travis (Linux build)
+SSD is an unified framework for object detection with a single network. You can use the code to train/evaluate a network for object detection task. For more details, please refer to our [arXiv paper](http://arxiv.org/abs/1512.02325).
 
-[![Build status](https://ci.appveyor.com/api/projects/status/128eg95svel2a2xs?svg=true)]
-(https://ci.appveyor.com/project/pavlejosipovic/caffe-v45qi) AppVeyor (Windows build)
+<p align="center">
+<img src="http://www.cs.unc.edu/~wliu/papers/ssd.png" alt="SSD Framework" width="600px">
+</p>
 
-## Windows Setup
-**Requirements**: Visual Studio 2013
+<center>
 
-### Pre-Build Steps
-Copy `.\windows\CommonSettings.props.example` to `.\windows\CommonSettings.props`
+| System | VOC2007 test *mAP* | **FPS** (Titan X) | Number of Boxes |
+|:-------|:-----:|:-------:|:-------:|
+| [Faster R-CNN (VGG16)](https://github.com/ShaoqingRen/faster_rcnn) | 73.2 | 7 | 300 |
+| [Faster R-CNN (ZF)](https://github.com/ShaoqingRen/faster_rcnn) | 62.1 | 17 | 300 |
+| [YOLO](http://pjreddie.com/darknet/yolo/) | 63.4 | 45 | 98 |
+| [Fast YOLO](http://pjreddie.com/darknet/yolo/) | 52.7 | 155 | 98 |
+| SSD300 (VGG16) | 72.1 | 58 | 7308 |
+| SSD500 (VGG16) | **75.1** | 23 | 20097 |
 
-By defaults Windows build requires `CUDA` and `cuDNN` libraries.
-Both can be disabled by adjusting build variables in `.\windows\CommonSettings.props`.
-Python support is disabled by default, but can be enabled via `.\windows\CommonSettings.props` as well.
-3rd party dependencies required by Caffe are automatically resolved via NuGet.
+</center>
 
-### CUDA
-Download `CUDA Toolkit 7.5` [from nVidia website](https://developer.nvidia.com/cuda-toolkit).
-If you don't have CUDA installed, you can experiment with CPU_ONLY build.
-In `.\windows\CommonSettings.props` set `CpuOnlyBuild` to `true` and set `UseCuDNN` to `false`.
+### Citing SSD
 
-### cuDNN
-Download `cuDNN v3` or `cuDNN v4` [from nVidia website](https://developer.nvidia.com/cudnn).
-Unpack downloaded zip to %CUDA_PATH% (environment variable set by CUDA installer).
-Alternatively, you can unpack zip to any location and set `CuDnnPath` to point to this location in `.\windows\CommonSettings.props`.
-`CuDnnPath` defined in `.\windows\CommonSettings.props`.
-Also, you can disable cuDNN by setting `UseCuDNN` to `false` in the property file.
+Please cite SSD in your publications if it helps your research:
 
-### Python
-To build Caffe Python wrapper set `PythonSupport` to `true` in `.\windows\CommonSettings.props`.
-Download Miniconda 2.7 64-bit Windows installer [from Miniconda website] (http://conda.pydata.org/miniconda.html).
-Install for all users and add Python to PATH (through installer).
+    @article{liu15ssd,
+      Title = {{SSD}: Single Shot MultiBox Detector},
+      Author = {Liu, Wei and Anguelov, Dragomir and Erhan, Dumitru and Szegedy, Christian and Reed, Scott and Fu, Cheng-Yang and Berg, Alexander C.},
+      Journal = {arXiv preprint arXiv:1512.02325},
+      Year = {2015}
+    }
 
-Run the following commands from elevated command prompt:
+### Contents
+1. [Installation](#installation)
+2. [Preparation](#preparation)
+3. [Train/Eval](#traineval)
+4. [Contact](#contact)
 
-```
-conda install --yes numpy scipy matplotlib scikit-image pip
-pip install protobuf
-```
+### Installation
+1. Get the code. We will call the directory that you cloned Caffe into `$CAFFE_ROOT`
+  ```Shell
+  git clone https://github.com/weiliu89/caffe.git
+  cd caffe
+  git checkout ssd
+  ```
 
-#### Remark
-After you have built solution with Python support, in order to use it you have to either:  
-* set `PythonPath` environment variable to point to `<caffe_root>\Build\x64\Release\pycaffe`, or
-* copy folder `<caffe_root>\Build\x64\Release\pycaffe\caffe` under `<python_root>\lib\site-packages`.
+2. Build the code. Please follow [Caffe instruction](http://caffe.berkeleyvision.org/installation.html) to install all necessary packages and build it.
+  ```Shell
+  # Modify Makefile.config according to your Caffe installation.
+  cp Makefile.config.example Makefile.config
+  make -j8
+  # Make sure to include $CAFFE_ROOT/python to your PYTHONPATH.
+  make py
+  make test -j8
+  make runtest -j8
+  # If you have multiple GPUs installed in your machine, make runtest might fail. If so, try following:
+  export CUDA_VISIBLE_DEVICES=0; make runtest -j8
+  # If you have error: "Check failed: error == cudaSuccess (10 vs. 0)  invalid device ordinal",
+  # first make sure you have the specified GPUs, or try following if you have multiple GPUs:
+  unset CUDA_VISIBLE_DEVICES
+  ```
 
-### Matlab
-To build Caffe Matlab wrapper set `MatlabSupport` to `true` and `MatlabDir` to the root of your Matlab installation in `.\windows\CommonSettings.props`.
+### Preparation
+1. Download [fully convolutional reduced (atrous) VGGNet](https://gist.github.com/weiliu89/2ed6e13bfd5b57cf81d6). By default, we assume the model is stored in `$CAFFE_ROOT/models/VGGNet/`
 
-#### Remark
-After you have built solution with Matlab support, in order to use it you have to:
-* add the generated `matcaffe` folder to Matlab search path, and
-* add `<caffe_root>\Build\x64\Release` to your system path.
+2. Download VOC2007 and VOC2012 dataset. By default, we assume the data is stored in `$HOME/data/`
+  ```Shell
+  # Download the data.
+  cd $HOME/data
+  wget http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar
+  wget http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar
+  wget http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtest_06-Nov-2007.tar
+  # Extract the data.
+  tar -xvf VOCtrainval_11-May-2012.tar
+  tar -xvf VOCtrainval_06-Nov-2007.tar
+  tar -xvf VOCtest_06-Nov-2007.tar
+  ```
 
-### Build
-Now, you should be able to build `.\windows\Caffe.sln`
+3. Create the LMDB file.
+  ```Shell
+  cd $CAFFE_ROOT
+  # Create the trainval.txt, test.txt, and test_name_size.txt in data/VOC0712/
+  ./data/VOC0712/create_list.sh
+  # You can modify the parameters in create_data.sh if needed.
+  # It will create lmdb files for trainval and test with encoded original image:
+  #   - $HOME/data/VOCdevkit/VOC0712/lmdb/VOC0712_trainval_lmdb
+  #   - $HOME/data/VOCdevkit/VOC0712/lmdb/VOC0712_test_lmdb
+  # and make soft links at examples/VOC0712/
+  ./data/VOC0712/create_data.sh
+  ```
 
-## Further Details
+### Train/Eval
+1. Train your model and evaluate the model on the fly.
+  ```Shell
+  # It will create model definition files and save snapshot models in:
+  #   - $CAFFE_ROOT/models/VGGNet/VOC0712/SSD_300x300/
+  # and job file, log file, and the python script in:
+  #   - $CAFFE_ROOT/jobs/VGGNet/VOC0712/SSD_300x300/
+  # and save temporary evaluation results in:
+  #   - $HOME/data/VOCdevkit/results/VOC2007/SSD_300x300/
+  # It should reach 72.* mAP at 60k iterations.
+  python examples/ssd/ssd_pascal.py
+  ```
+  If you don't have time to train your model, you can download a pre-trained model at [here](http://www.cs.unc.edu/~wliu/projects/SSD/models_VGGNet_VOC0712_SSD_300x300.tar.gz).
 
-Refer to the BVLC/caffe master branch README for all other details such as license, citation, and so on.
+2. Evaluate the most recent snapshot.
+  ```Shell
+  # If you would like to test a model you trained, you can do:
+  python examples/ssd/score_ssd_pascal.py
+  ```
+
+3. Test your model using a webcam. Note: press <kbd>esc</kbd> to stop.
+  ```Shell
+  # If you would like to attach a webcam to a model you trained, you can do:
+  python examples/ssd/ssd_pascal_webcam.py
+  ```
+  [Here](https://drive.google.com/file/d/0BzKzrI_SkD1_R09NcjM1eElLcWc/view) is a demo video of running a SSD500 model trained on [MSCOCO](http://mscoco.org) dataset.
+
+4. Check out `examples/ssd_detect.ipynb` on how to detect objects using a SSD model.
+
+5. To train on other dataset, please refer to data/OTHERDATASET for more details.
+We currently add support for MSCOCO.
+
+### Contact
+Please direct all comments and report all bugs to:
+
+    Wei Liu
+    wliu@cs.unc.edu
+
+# Deep Metric Learning via Lifted Structured Feature Embedding
+This repository is an extension of [Caffe](https://github.com/bvlc/caffe) for the paper "Deep Metric Learning via Lifted Structured Feature Embedding" (CVPR16). Also, this is a Github submodule for the main repository at [Deep-Metric-Learning-CVPR16](https://github.com/rksltnl/Deep-Metric-Learning-CVPR16). 
+
+## Citing this work
+If you find this work useful in your research, please consider citing:
+
+    @inproceedings{songCVPR16,
+        Author = {Hyun Oh Song and Yu Xiang and Stefanie Jegelka and Silvio Savarese},
+        Title = {Deep Metric Learning via Lifted Structured Feature Embedding},
+        Booktitle = {Computer Vision and Pattern Recognition (CVPR)},
+        Year = {2016}
+    }
+
+## Installation
+1. Install prerequisites for `Caffe` (see: [Caffe installation instructions](http://caffe.berkeleyvision.org/installation.html))
+
+2. Compile this caffe extension. 
+Run `make all`,  `make test`
+
+## Licence
+MIT Licence

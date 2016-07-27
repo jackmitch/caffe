@@ -94,6 +94,16 @@ LOG*
 CURRENT
 MANIFEST-*
 
+# temporary directories
+jobs
+temp
+examples/*/*lmdb
+opencv
+boost
+gflags
+glog
+openblas
+
 #Visual Studio files
 *.user
 *.suo
@@ -101,3 +111,6 @@ MANIFEST-*
 *.opensdf
 *.pdb
 *.props
+protobuf
+3rdparty/
+tools/binman/node_modules/
