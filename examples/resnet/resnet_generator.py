@@ -43,13 +43,13 @@ layer {
   transform_param {
     mirror: true
     crop_size: 224
-    mean_value: 104
-    mean_value: 117
-    mean_value: 123
+    mean_value: 129.1863
+    mean_value: 104.7624
+    mean_value: 93.594
   }
   data_param {
-    source: "../imagenet/ilsvrc12_train_lmdb"
-    batch_size: 8
+    source: "/host-ssd1TBB/vgg-face-crop-lmdb/ilsvrc12_train_lmdb"
+    batch_size: 256
     backend: LMDB
   }
 }
@@ -64,13 +64,13 @@ layer {
   transform_param {
     mirror: false
     crop_size: 224
-    mean_value: 104
-    mean_value: 117
-    mean_value: 123
+    mean_value: 129.1863
+    mean_value: 104.7624
+    mean_value: 93.594
   }
   data_param {
-    source: "../imagenet/ilsvrc12_val_lmdb"
-    batch_size: 5
+    source: "/host-ssd1TBB/vgg-face-crop-lmdb/ilsvrc12_val_lmdb"
+    batch_size: 128
     backend: LMDB
   }
 }'''
@@ -119,14 +119,6 @@ def generate_fc_layer(num_output, layer_name, bottom, top, filler="xavier"):
   type: "InnerProduct"
   bottom: "%s"
   top: "%s"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
   inner_product_param {
      num_output: %d
      weight_filler {
@@ -223,7 +215,7 @@ def generate_train_val():
     network_str = generate_data_layer()
     '''before stage'''
     last_top = 'data'
-    network_str += generate_conv_layer(7, 64, 2, 0, 'conv1', last_top, 'conv1')
+    network_str += generate_conv_layer(7, 64, 2, 3, 'conv1', last_top, 'conv1')
     network_str += generate_bn_layer('conv1_bn', 'conv1', 'conv1')
     network_str += generate_scale_layer('conv1_scale', 'conv1', 'conv1')
     network_str += generate_activation_layer('conv1_relu', 'conv1', 'conv1', 'ReLU')
@@ -353,7 +345,7 @@ def generate_train_val():
         network_str += generate_activation_layer('conv5_%d_sum_relu'%l, 'conv5_%d_sum'%l, 'conv5_%d_sum'%l, 'ReLU')
         last_top = 'conv5_%d_sum'%l
     network_str += generate_pooling_layer(7, 1, 'AVE', 'pool2', last_top, 'pool2')
-    network_str += generate_fc_layer(1000, 'fc', 'pool2', 'fc', 'gaussian')
+    network_str += generate_fc_layer(1000, 'fc', 'pool2', 'fc')
     network_str += generate_softmax_loss('fc')
     return network_str
 
