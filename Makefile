@@ -162,7 +162,7 @@ NONEMPTY_WARN_REPORT := $(BUILD_DIR)/$(WARNS_EXT)
 ##############################
 # Derive include and lib directories
 ##############################
-CUDA_INCLUDE_DIR := $(CUDA_DIR_TARGET)/include
+CUDA_INCLUDE_DIR := $(CUDA_DIR_HOST)/include
 
 CUDA_LIB_DIR :=
 # add <cuda>/lib64 only if it exists
