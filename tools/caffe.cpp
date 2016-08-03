@@ -309,14 +309,16 @@ RegisterBrewFunction(test);
 
 #ifdef _MSC_VER
 struct ImagePart {
-  int offset_x;
-  int offset_y;
+  int x;
+  int y;
+  int width;
+  int height;
   float sfx;
   float sfy;
   ImagePart() : 
-    offset_x(0), offset_y(0), sfx(1.f), sfy(1.f) {}
-  ImagePart(int x, int y, float sx, float sy) : 
-    offset_x(x), offset_y(y), sfx(sx), sfy(sy) {}
+    x(0), y(0), width(0), height(0), sfx(1.f), sfy(1.f) {}
+  ImagePart(int x, int y, int w, int h, float sx, float sy) : 
+    x(x), y(y), width(w), height(h), sfx(sx), sfy(sy) {}
 };
 
 struct ObjectDetection {
@@ -455,7 +457,7 @@ int ssdtest() {
     float sf = 1.0;
     float detection_threshold = 0.15f;
     int max_im_size = 2048;
-    bool do_patches = false;
+    bool do_patches = true;
     int overlap = 50;
 
     boost::shared_ptr<caffe::MemoryDataLayer<float> > memory_layer =
@@ -497,24 +499,29 @@ int ssdtest() {
     {
       // do the whole image as well as patches for selfies and large faces etc, take account of scale
       // here for resizing detections to original image size, as net will internally resize to net_img_width etc 
-      sub_imgs.push_back(ImagePart());
-      sub_imgs[0].sfx = static_cast<float>(net_img_width) / static_cast<float>(img.cols);
-      sub_imgs[0].sfy = static_cast<float>(net_img_height) / static_cast<float>(img.rows);
-
+      sub_imgs.push_back(ImagePart(0, 0, net_img_width, net_img_height, 
+                                  static_cast<float>(net_img_width) / static_cast<float>(img.cols),
+                                  static_cast<float>(net_img_height) / static_cast<float>(img.rows)));
+      int start_patch_idx = sub_imgs.size();
       // build up the sub patches to process
       if (img.cols > net_img_width)
       {
         int startx = 0;
-        int endx = net_img_width;
         while (startx < img.cols)
         {
           ImagePart part;
-          part.offset_x = startx;
-          startx += net_img_width - overlap;
-          endx = startx + net_img_width;
-          if (img.cols - part.offset_x < net_img_width) {
-            part.offset_x = img.cols - net_img_width;
+          part.x = std::max<int>(0, startx - overlap);
+          int endx = part.x + net_img_width;
+          // allow to distort the box by 10% to avoid processing an extra patch
+          if (img.cols - endx < 0.1*net_img_width) {
+            endx = img.cols;
           }
+          if (img.cols - part.x < net_img_width) {
+            part.x = img.cols - net_img_width;
+          }
+          part.width = endx - part.x;
+          part.height = std::min<int>(net_img_height, img.rows);
+          startx += part.width;
           sub_imgs.push_back(part);
         }
       }
@@ -526,7 +533,7 @@ int ssdtest() {
       {
         int count = sub_imgs.size();
 
-        for (int n = 0; n < count; n++)
+        for (int n = start_patch_idx; n < count; n++)
         {
           int starty = net_img_height - overlap;
           int last_endy = 0;
@@ -534,15 +541,22 @@ int ssdtest() {
           while (last_endy < img.rows)
           {
             ImagePart part;
-            part.offset_y = starty;
-            part.offset_x = sub_imgs[n].offset_x;
-            if (img.rows - part.offset_y < net_img_height) {
-              part.offset_y = img.rows - net_img_height;
+            part.y = starty;
+            part.x = sub_imgs[n].x;
+            part.width = sub_imgs[n].width;
+            if (img.rows - part.y < net_img_height) {
+              part.y = img.rows - net_img_height;
             }
+            int endy = starty + net_img_height;
+            // allow it to squash a box a bit if it avoids having to process another patch
+            if (img.rows - endy < 0.1*net_img_height) {
+              endy = img.rows;
+            }
+            part.height = endy - starty;
             sub_imgs.push_back(part);
 
-            last_endy = starty + net_img_height;
-            starty += net_img_height - overlap;
+            last_endy = starty + part.height;
+            starty = last_endy - overlap;
           }
         }
       }
@@ -561,10 +575,10 @@ int ssdtest() {
       if (do_patches)
       {
         cv::Rect rect;
-        rect.x = std::max(0, sub_imgs[n].offset_x);
-        rect.y = std::max(0, sub_imgs[n].offset_y);
-        rect.width = std::min<int>(net_img_width, img.cols - rect.x);
-        rect.height = std::min<int>(net_img_height, img.rows - rect.y);
+        rect.x = std::max(0, sub_imgs[n].x);
+        rect.y = std::max(0, sub_imgs[n].y);
+        rect.width = std::min<int>(sub_imgs[n].width, img.cols - rect.x);
+        rect.height = std::min<int>(sub_imgs[n].height, img.rows - rect.y);
 
         if (sub_imgs[n].sfx != 1.f || sub_imgs[n].sfy != 1.f) {
           cv::Mat subimg;
@@ -573,6 +587,9 @@ int ssdtest() {
         }
         else {
           cv::Mat subimg = img(rect);
+          if (subimg.cols != net_img_width || subimg.rows != net_img_height) {
+            cv::resize(subimg, subimg, cv::Size(net_img_width, net_img_height));
+          }
           netimgs.push_back(subimg);
         }
       }
@@ -580,7 +597,7 @@ int ssdtest() {
         netimgs.push_back(img);
       }
 
-      LOG(INFO) << "Patch " << n << " " << sub_imgs[n].offset_x << " " << sub_imgs[n].offset_y;
+      LOG(INFO) << "Patch " << n << " " << sub_imgs[n].x << " " << sub_imgs[n].y;
 
       memory_layer->AddMatVector(netimgs, labels);
 
@@ -599,10 +616,10 @@ int ssdtest() {
         if (det.score >= detection_threshold && (det.label == FLAGS_ssd_label || FLAGS_ssd_label < 0))
         {
           det.scale = std::min<float>(sub_imgs[n].sfx, sub_imgs[n].sfy);
-          det.left = (sub_imgs[n].offset_x + result_vec[k + 3] * netimgs[0].cols) * (1.f / sub_imgs[n].sfx);
-          det.top = (sub_imgs[n].offset_y + result_vec[k + 4] * netimgs[0].rows) * (1.f / sub_imgs[n].sfy);
-          det.right = (sub_imgs[n].offset_x + result_vec[k + 5] * netimgs[0].cols) * (1.f / sub_imgs[n].sfx);
-          det.bottom = (sub_imgs[n].offset_y + result_vec[k + 6] * netimgs[0].rows) * (1.f / sub_imgs[n].sfy);
+          det.left = (sub_imgs[n].x + result_vec[k + 3] * sub_imgs[n].width) * (1.f / sub_imgs[n].sfx);
+          det.top = (sub_imgs[n].y + result_vec[k + 4] * sub_imgs[n].height) * (1.f / sub_imgs[n].sfy);
+          det.right = (sub_imgs[n].x + result_vec[k + 5] * sub_imgs[n].width) * (1.f / sub_imgs[n].sfx);
+          det.bottom = (sub_imgs[n].y + result_vec[k + 6] * sub_imgs[n].height) * (1.f / sub_imgs[n].sfy);
 
           // resize to original image dimensions
           det.left *= inv_sf;
