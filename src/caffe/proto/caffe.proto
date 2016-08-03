@@ -583,18 +583,26 @@ message ResizeParameter {
   optional Resize_mode resize_mode = 2 [default = WARP];
   optional uint32 height = 3 [default = 0];
   optional uint32 width = 4 [default = 0];
-
+  
+  // this resizes the image such that shortest side of the image is scaled between min and max scale
+  // the longest side is scaled to keep current aspect ratio if min_aspect_ratio and max_aspect_ratio 
+  // are not defined or the aspect ratio is randomly sampled from the range.
+  optional float min_scale = 5 [default = 0];
+  optional float max_scale = 6 [default = 0];
+  optional float min_aspect_ratio = 7 [default = 0];
+  optional float max_aspect_ratio = 8 [default = 0];
+  
   enum Pad_mode {
     CONSTANT = 1;
     MIRRORED = 2;
     REPEAT_NEAREST = 3;
   }
   // Padding mode for BE_SMALL_SIZE_AND_PAD mode and object centering
-  optional Pad_mode pad_mode = 5 [default = CONSTANT];
+  optional Pad_mode pad_mode = 9 [default = CONSTANT];
   // if specified can be repeated once (would fill all the channels)
   // or can be repeated the same number of times as channels
   // (would use it them to the corresponding channel)
-  repeated float pad_value = 6;
+  repeated float pad_value = 10;
 
   enum Interp_mode { //Same as in OpenCV
     LINEAR = 1;
@@ -604,7 +612,7 @@ message ResizeParameter {
     LANCZOS4 = 5;
   }
   //interpolation for for resizing
-  repeated Interp_mode interp_mode = 7;
+  repeated Interp_mode interp_mode = 11;
 }
 
 message SaltPepperParameter {
