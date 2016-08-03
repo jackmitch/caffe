@@ -350,6 +350,8 @@ struct ImagePart {
   float sfy;
   ImagePart() : 
     x(0), y(0), width(0), height(0), sfx(1.f), sfy(1.f) {}
+  ImagePart(int w, int h) :
+    x(0), y(0), width(w), height(h), sfx(1.f), sfy(1.f) {}
   ImagePart(int x, int y, int w, int h, float sx, float sy) : 
     x(x), y(y), width(w), height(h), sfx(sx), sfy(sy) {}
 };
@@ -490,7 +492,7 @@ int ssdtest() {
     float sf = 1.0;
     float detection_threshold = 0.15f;
     int max_im_size = 2048;
-    bool do_patches = true;
+    bool do_patches = false;
     int overlap = 50;
 
     boost::shared_ptr<caffe::MemoryDataLayer<float> > memory_layer =
@@ -595,7 +597,9 @@ int ssdtest() {
       }
     }
     else {
-      sub_imgs.push_back(ImagePart());
+      sub_imgs.push_back(ImagePart(0, 0, net_img_width, net_img_height,
+        static_cast<float>(net_img_width) / static_cast<float>(img.cols),
+        static_cast<float>(net_img_height) / static_cast<float>(img.rows)));
     }
 
     Timer netTimer;
@@ -605,29 +609,23 @@ int ssdtest() {
     {
       std::vector<cv::Mat> netimgs;
 
-      if (do_patches)
-      {
-        cv::Rect rect;
-        rect.x = std::max(0, sub_imgs[n].x);
-        rect.y = std::max(0, sub_imgs[n].y);
-        rect.width = std::min<int>(sub_imgs[n].width, img.cols - rect.x);
-        rect.height = std::min<int>(sub_imgs[n].height, img.rows - rect.y);
+      cv::Rect rect;
+      rect.x = std::max(0, sub_imgs[n].x);
+      rect.y = std::max(0, sub_imgs[n].y);
+      rect.width = std::min<int>(sub_imgs[n].width, img.cols - rect.x);
+      rect.height = std::min<int>(sub_imgs[n].height, img.rows - rect.y);
 
-        if (sub_imgs[n].sfx != 1.f || sub_imgs[n].sfy != 1.f) {
-          cv::Mat subimg;
-          cv::resize(img, subimg, cv::Size(), sub_imgs[n].sfx, sub_imgs[n].sfy);
-          netimgs.push_back(subimg);
-        }
-        else {
-          cv::Mat subimg = img(rect);
-          if (subimg.cols != net_img_width || subimg.rows != net_img_height) {
-            cv::resize(subimg, subimg, cv::Size(net_img_width, net_img_height));
-          }
-          netimgs.push_back(subimg);
-        }
+      if (sub_imgs[n].sfx != 1.f || sub_imgs[n].sfy != 1.f) {
+        cv::Mat subimg;
+        cv::resize(img, subimg, cv::Size(), sub_imgs[n].sfx, sub_imgs[n].sfy);
+        netimgs.push_back(subimg);
       }
       else {
-        netimgs.push_back(img);
+        cv::Mat subimg = img(rect);
+        if (subimg.cols != net_img_width || subimg.rows != net_img_height) {
+          cv::resize(subimg, subimg, cv::Size(net_img_width, net_img_height));
+        }
+        netimgs.push_back(subimg);
       }
 
       LOG(INFO) << "Patch " << n << " " << sub_imgs[n].x << " " << sub_imgs[n].y;
