@@ -410,7 +410,7 @@ CXXFLAGS += -MMD -MP
 # Complete build flags.
 COMMON_FLAGS += $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir))
 CXXFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
-NVCCFLAGS += -ccbin="$(NVCXX)" -Xcompiler -fPIC $(COMMON_FLAGS) $(CXXFLAGS)
+NVCCFLAGS += -ccbin="$(NVCXX)" -Xcompiler -fPIC $(COMMON_FLAGS) $(NVCXXFLAGS)
 # mex may invoke an older gcc that is too liberal with -Wuninitalized
 MATLAB_CXXFLAGS := $(CXXFLAGS) -Wno-uninitialized
 LINKFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
