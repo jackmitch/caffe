@@ -12,7 +12,7 @@ let pythonShell = require('python-shell');
 
 app.use(express.static(path.join(__dirname, client)));
 
-let logfile_path = "C:\\Users\\JLeigh\\MyProjects\\OMGLife\\visp\\caffe\\tools\\extra\\combined_caffe_log.txt";
+let logfile_path = "/tmp/caffe.INFO";
 let python_parser_path = '../parse_log.py';
 
 var readLogFile = function(logfile_path) {
@@ -32,7 +32,7 @@ var readLogFile = function(logfile_path) {
 
       if(linecnt == 0) {
         for(let i=0; i < tuple.length; i++) {
-          if(tuple[i] == 'accuracy') {
+          if(tuple[i] == 'accuracy' || tuple[i] == 'acc/top-1') {
             isTest = true;
           }
         }
@@ -41,7 +41,7 @@ var readLogFile = function(logfile_path) {
         data.labels.push(parseFloat(tuple[0]));
         if(isTest) {
           data.series[0].push(parseFloat(tuple[3]));
-          data.series[0].push(parseFloat(tuple[4]));
+          data.series[1].push(parseFloat(tuple[4]));
         } else {
           data.series[0].push(parseFloat(tuple[3]));
         }
