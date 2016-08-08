@@ -161,7 +161,7 @@ def write_csv(output_filename, dict_list, delimiter, verbose=False):
 
     with open(output_filename, 'w') as f:
         dict_writer = csv.DictWriter(f, fieldnames=dict_list[0].keys(),
-                                     dialect=dialect)
+                                     dialect=dialect, lineterminator='\n')
         dict_writer.writeheader()
         dict_writer.writerows(dict_list)
     if verbose:
