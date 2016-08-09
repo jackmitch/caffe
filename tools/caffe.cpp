@@ -546,15 +546,15 @@ int ssdtest() {
             if (img.rows - part.y < net_img_height) {
               part.y = img.rows - net_img_height;
             }
-            int endy = starty + net_img_height;
+            int endy = part.y + net_img_height;
             // allow it to squash a box a bit if it avoids having to process another patch
             if (img.rows - endy < 0.1*net_img_height) {
               endy = img.rows;
             }
-            part.height = endy - starty;
+            part.height = endy - part.y;
             sub_imgs.push_back(part);
 
-            last_endy = starty + part.height;
+            last_endy = part.y + part.height;
             starty = last_endy - overlap;
           }
         }
@@ -583,7 +583,8 @@ int ssdtest() {
       }
       netimgs.push_back(subimg);
 
-      LOG(INFO) << "Patch " << n << " " << sub_imgs[n].x << " " << sub_imgs[n].y;
+      LOG(INFO) << "Patch " << n << " x: " << sub_imgs[n].x << " y: " << sub_imgs[n].y << 
+                   " w: " << sub_imgs[n].width << " h: " << sub_imgs[n].height;
 
       memory_layer->AddMatVector(netimgs, labels);
 
@@ -631,18 +632,19 @@ int ssdtest() {
     nonMaximaSuppression_(detections);
 
     // draw the patches
-/*    if (do_patches)
+    /*
+    if (do_patches)
     {
       for (size_t n = 0; n < sub_imgs.size(); n++)
       {
-        int x = (1.f / sf) * std::max<int>(0, sub_imgs[n].offset_x);
-        int y = (1.f / sf) * std::max<int>(0, sub_imgs[n].offset_y);
-        int x0 = std::min<int>(oimg.cols, x + (1.f / sf) * net_img_size);
-        int y0 = std::min<int>(oimg.rows, y + (1.f / sf) * net_img_size);
-        cv::rectangle(oimg, cv::Point(x,y), cv::Point(x0, y0), cv::Scalar(0, 255, 0), 4);
+        int x = (1.f / sf) * std::max<int>(0, sub_imgs[n].x);
+        int y = (1.f / sf) * std::max<int>(0, sub_imgs[n].y);
+        int x0 = std::min<int>(oimg.cols, x + (1.f / sf) * sub_imgs[n].width);
+        int y0 = std::min<int>(oimg.rows, y + (1.f / sf) * sub_imgs[n].height);
+        cv::rectangle(oimg, cv::Point(x,y), cv::Point(x0, y0), cv::Scalar(n*20, 255-(n*20), 0), 4);
       }
-    }
-*/
+    }*/
+
     // draw the top detections
     int cnt = 0;
     for (RObjItr it = detections.rbegin(); it != detections.rend(); it++, cnt++) {
