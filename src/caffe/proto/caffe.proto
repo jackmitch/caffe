@@ -606,11 +606,11 @@ message ResizeParameter {
     REPEAT_NEAREST = 3;
   }
   // Padding mode for BE_SMALL_SIZE_AND_PAD mode and object centering
-  optional Pad_mode pad_mode = 9 [default = CONSTANT];
+  optional Pad_mode pad_mode = 11 [default = CONSTANT];
   // if specified can be repeated once (would fill all the channels)
   // or can be repeated the same number of times as channels
   // (would use it them to the corresponding channel)
-  repeated float pad_value = 10;
+  repeated float pad_value = 12;
 
   enum Interp_mode { //Same as in OpenCV
     LINEAR = 1;
@@ -629,6 +629,13 @@ message ResizeParameter {
   optional float max_scale = 13 [default = 0];
   optional float min_aspect_ratio = 14 [default = 0];
   optional float max_aspect_ratio = 15 [default = 0];
+  
+  // This resizes the image such that the shortest side of the image is scaled between 
+  // min and max_shortest_side (randomly sampled). This cannot be used in conjunction
+  // iwth min_scale etc
+  optional uint32 min_shortest_side = 16 [default = 0];
+  optional uint32 max_shortest_side = 17 [default = 0];
+
 }
 
 message SaltPepperParameter {

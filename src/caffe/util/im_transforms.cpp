@@ -343,6 +343,7 @@ cv::Mat ApplyResize(const cv::Mat& in_img, const ResizeParameter& param) {
   if (param.has_min_scale() || param.has_max_scale()) {
     CHECK_EQ(param.has_min_scale(), param.has_max_scale());
     CHECK_NE(param.has_height(), param.has_min_scale());
+    CHECK_NE(param.has_min_shortest_side(), param.has_min_scale());
     CHECK_GE(param.max_scale(), param.min_scale());
     CHECK_GT(param.min_scale(), 0.);
     CHECK_LE(param.min_scale(), 1.);
@@ -354,6 +355,7 @@ cv::Mat ApplyResize(const cv::Mat& in_img, const ResizeParameter& param) {
     CHECK_GT(param.min_aspect_ratio(), 0.);
     CHECK_LT(param.max_aspect_ratio(), FLT_MAX);
   }
+  CHECK_EQ(param.has_min_shortest_side(), param.has_max_shortest_side());
 
   // Reading parameters
   int new_height = param.height();
@@ -375,6 +377,18 @@ cv::Mat ApplyResize(const cv::Mat& in_img, const ResizeParameter& param) {
     }
     new_width = floor(in_img.cols * scale * sqrt(aspect_ratio));
     new_height = floor(in_img.rows * scale / sqrt(aspect_ratio));
+  }
+  else if (param.has_min_shortest_side() && param.has_max_shortest_side()) {
+    uint32_t side = 0;
+    caffe_rng_uniform(1, param.min_shortest_side(), param.max_shortest_side(), &side);
+    if (in_img.rows > in_img.cols) {
+      new_width = side;
+      new_height = round(((float)side / in_img.cols) * in_img.rows);
+    }
+    else {
+      new_height = side;
+      new_width = round(((float)side / in_img.rows) * in_img.cols);
+    }
   }
 
   int pad_mode = cv::BORDER_CONSTANT;
