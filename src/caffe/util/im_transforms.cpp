@@ -350,15 +350,15 @@ cv::Mat ApplyResize(const cv::Mat& in_img, const ResizeParameter& param) {
     new_height = floor(in_img.rows * scale / sqrt(aspect_ratio));
   }
   else if (param.has_min_shortest_side() && param.has_max_shortest_side()) {
-    uint32_t side = 0;
-    caffe_rng_uniform(1, param.min_shortest_side(), param.max_shortest_side(), &side);
+    float side = 0;
+    caffe_rng_uniform(1, (float)param.min_shortest_side(), (float)param.max_shortest_side(), &side);
     if (in_img.rows > in_img.cols) {
       new_width = side;
-      new_height = round(((float)side / in_img.cols) * in_img.rows);
+      new_height = round((side / in_img.cols) * in_img.rows);
     }
     else {
       new_height = side;
-      new_width = round(((float)side / in_img.rows) * in_img.cols);
+      new_width = round((side / in_img.rows) * in_img.cols);
     }
   }
 
