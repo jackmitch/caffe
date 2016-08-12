@@ -1080,6 +1080,11 @@ vector<int> DataTransformer<Dtype>::InferBlobShape(const cv::Mat& cv_img) {
   if (param_.has_resize_param()) {
     InferNewSize(param_.resize_param(), img_width, img_height,
                  &img_width, &img_height);
+	// JAL hack
+    if (param_.resize_param().has_min_shortest_side()) {
+      img_height = crop_h;
+      img_width = crop_w;
+    }
   }
   CHECK_GE(img_height, crop_h);
   CHECK_GE(img_width, crop_w);
