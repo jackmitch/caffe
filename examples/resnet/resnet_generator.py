@@ -100,7 +100,7 @@ def generate_conv_layer(kernel_size, kernel_num, stride, pad, layer_name, bottom
         bias_term: %s
         weight_filler {
           type: "%s"
-          std: "%s"
+          std: %f
         }
         bias_filler {
           type: "constant"
@@ -414,8 +414,8 @@ display: 40
 average_loss: 40
 base_lr: 0.1
 lr_policy: "step"
-stepvalue: 320000
-gamma: 0.96
+stepsize: 100000
+gamma: 0.1
 max_iter: 600000
 momentum: 0.9
 weight_decay: 0.0001
