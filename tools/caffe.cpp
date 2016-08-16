@@ -488,6 +488,25 @@ int ssdtest() {
       cv::resize(oimg, img, cv::Size(), sf, sf);
     }
 
+    // make sure the image is at least the size expected by the detector, if not pad
+    int pad_x = 0, pad_y = 0;
+    if (img.cols < net_img_width) {
+      pad_x = std::ceil((net_img_width - img.cols) / 2);
+      cv::Mat padded(img.rows, img.cols + pad_x * 2, img.type());
+      padded.setTo(0);
+      img.copyTo(padded(cv::Rect(pad_x, 0, img.cols, img.rows)));
+      img = padded;
+    }
+    if (img.rows < net_img_height) {
+      pad_y = std::ceil((net_img_height - img.rows) / 2);
+      cv::Mat padded(img.rows + pad_y * 2, img.cols, img.type());
+      padded.setTo(0);
+      img.copyTo(padded(cv::Rect(0, pad_y, img.cols, img.rows)));
+      img = padded;
+    }
+    CHECK_GE(img.cols, net_img_width);
+    CHECK_GE(img.rows, net_img_height);
+
     float inv_sf = 1.0 / sf;
 
     std::map<float, ObjectDetection> detections;
@@ -502,61 +521,53 @@ int ssdtest() {
       sub_imgs.push_back(ImagePart(0, 0, img.cols, img.rows));
 
       int start_patch_idx = sub_imgs.size();
+
       // build up the sub patches to process
-      if (img.cols > net_img_width)
+      int startx = 0;
+      while (startx < img.cols)
       {
-        int startx = 0;
-        while (startx < img.cols)
+        ImagePart part;
+        part.x = std::max<int>(0, startx - overlap);
+        int endx = part.x + net_img_width;
+        // allow to distort the box by 10% to avoid processing an extra patch
+        if (img.cols - endx < 0.1*net_img_width) {
+          endx = img.cols;
+        }
+        if (img.cols - part.x < net_img_width) {
+          part.x = img.cols - net_img_width;
+        }
+        part.width = endx - part.x;
+        part.height = std::min<int>(net_img_height, img.rows);
+        startx += part.width;
+        sub_imgs.push_back(part);
+      }
+
+      int count = sub_imgs.size();
+
+      for (int n = start_patch_idx; n < count; n++)
+      {
+        int starty = net_img_height - overlap;
+        int last_endy = 0;
+
+        while (last_endy < img.rows)
         {
           ImagePart part;
-          part.x = std::max<int>(0, startx - overlap);
-          int endx = part.x + net_img_width;
-          // allow to distort the box by 10% to avoid processing an extra patch
-          if (img.cols - endx < 0.1*net_img_width) {
-            endx = img.cols;
+          part.y = starty;
+          part.x = sub_imgs[n].x;
+          part.width = sub_imgs[n].width;
+          if (img.rows - part.y < net_img_height) {
+            part.y = img.rows - net_img_height;
           }
-          if (img.cols - part.x < net_img_width) {
-            part.x = img.cols - net_img_width;
+          int endy = part.y + net_img_height;
+          // allow it to squash a box a bit if it avoids having to process another patch
+          if (img.rows - endy < 0.1*net_img_height) {
+            endy = img.rows;
           }
-          part.width = endx - part.x;
-          part.height = std::min<int>(net_img_height, img.rows);
-          startx += part.width;
+          part.height = endy - part.y;
           sub_imgs.push_back(part);
-        }
-      }
-      else {
-        sub_imgs.push_back(ImagePart());
-      }
 
-      if (img.rows > net_img_height)
-      {
-        int count = sub_imgs.size();
-
-        for (int n = start_patch_idx; n < count; n++)
-        {
-          int starty = net_img_height - overlap;
-          int last_endy = 0;
-
-          while (last_endy < img.rows)
-          {
-            ImagePart part;
-            part.y = starty;
-            part.x = sub_imgs[n].x;
-            part.width = sub_imgs[n].width;
-            if (img.rows - part.y < net_img_height) {
-              part.y = img.rows - net_img_height;
-            }
-            int endy = part.y + net_img_height;
-            // allow it to squash a box a bit if it avoids having to process another patch
-            if (img.rows - endy < 0.1*net_img_height) {
-              endy = img.rows;
-            }
-            part.height = endy - part.y;
-            sub_imgs.push_back(part);
-
-            last_endy = part.y + part.height;
-            starty = last_endy - overlap;
-          }
+          last_endy = part.y + part.height;
+          starty = last_endy - overlap;
         }
       }
     }
@@ -581,6 +592,7 @@ int ssdtest() {
       if (subimg.cols != net_img_width || subimg.rows != net_img_height) {
         cv::resize(subimg, subimg, cv::Size(net_img_width, net_img_height));
       }
+
       netimgs.push_back(subimg);
 
       LOG(INFO) << "Patch " << n << " x: " << sub_imgs[n].x << " y: " << sub_imgs[n].y << 
@@ -610,6 +622,11 @@ int ssdtest() {
           det.bottom = sub_imgs[n].y + result_vec[k + 6] * sub_imgs[n].height;
 
           // resize to original image dimensions
+          det.left -= pad_x;
+          det.right -= pad_x;
+          det.top -= pad_y;
+          det.bottom -= pad_y;
+
           det.left *= inv_sf;
           det.right *= inv_sf;
           det.top *= inv_sf;
