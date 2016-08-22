@@ -1409,6 +1409,9 @@ message PoolingParameter {
   // If global_pooling then it will pool over the size of the bottom by doing
   // kernel_h = bottom->height and kernel_w = bottom->width
   optional bool global_pooling = 12 [default = false];
+  // if true will use floor for calculating the pooling layer height and width rather than ceil
+  // ceil matches the torch implementation.
+  optional bool use_floor = 13 [default = false];
 }
 
 message PowerParameter {
