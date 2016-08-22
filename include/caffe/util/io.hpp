@@ -43,7 +43,7 @@ inline void MakeTempDir(string* temp_dirname) {
 
 inline void MakeTempFilename(string* temp_filename) {
   path temp_files_subpath;
-  static uint64_t next_temp_file = 0;
+  static int next_temp_file = 0;
   temp_filename->clear();
   if ( temp_files_subpath.empty() ) {
     string path_string="";
@@ -75,7 +75,7 @@ inline void GetTempDirname(string* temp_dirname) {
 
 inline void GetTempFilename(string* temp_filename) {
   static path temp_files_subpath;
-  static uint64_t next_temp_file = 0;
+  static int next_temp_file = 0;
   temp_filename->clear();
   if ( temp_files_subpath.empty() ) {
     string path_string="";
