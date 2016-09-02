@@ -253,7 +253,9 @@ loss_param = {
     }
 
 # parameters for generating priors.
-# minimum dimension of input image
+# minimum starting size of face box is min_dim*0.2, these will be placed at 1st mbox_source_layers
+# progressively bigger boxes are used in higher layers until you get to pool6 which uses box size
+# of min_dim*0.95
 min_dim = 300
 # conv4_3 ==> 38 x 38
 # fc7-conv ==> 19 x 19
@@ -278,7 +280,10 @@ for ratio in xrange(min_ratio, max_ratio + 1, step):
   max_sizes.append(min_dim * (ratio + step) / 100.)
 min_sizes = [min_dim * 10 / 100.] + min_sizes
 max_sizes = [[]] + max_sizes
-aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
+# aspect ratio is used to calculate starting box width and height using width * sqrt(ap) and height / sqrt(ap)
+# each list in the list is the aspect ratios for each layer in mbox_source_layers. There is always a prior with
+# aspect ratio 1 by default at min and max size (from min_sizes and max_sizes).
+aspect_ratios = [[2], [2,3], [2,3], [2,3], [2,3], [2,3]]
 # L2 normalize conv4_3.
 normalizations = [20, -1, -1, -1, -1, -1]
 # variance used to encode/decode prior bboxes.
@@ -286,6 +291,8 @@ if code_type == P.PriorBox.CENTER_SIZE:
   prior_variance = [0.1, 0.1, 0.2, 0.2]
 else:
   prior_variance = [0.1]
+  
+# flip means the inverse of the aspect_ratios is also used for prior box sizes.
 flip = True
 clip = True
 

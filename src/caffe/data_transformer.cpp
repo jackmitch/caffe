@@ -866,6 +866,10 @@ vector<int> DataTransformer<Dtype>::InferBlobShape(const cv::Mat& cv_img) {
         param_.resize_param().width() > 0) {
       img_width = param_.resize_param().width();
     }
+    if (param_.resize_param().has_min_shortest_side()) {
+      img_height = crop_h;
+      img_width = crop_w;
+    }
   }
   CHECK_GE(img_height, crop_h);
   CHECK_GE(img_width, crop_w);

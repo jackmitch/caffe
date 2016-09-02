@@ -152,6 +152,8 @@ def write_csv(output_filename, dict_list, delimiter, verbose=False):
     if not dict_list:
         if verbose:
             print('Not writing %s; no lines to write' % output_filename)
+        f = open(output_filename, 'w')
+        f.close()
         return
 
     dialect = csv.excel
@@ -159,7 +161,7 @@ def write_csv(output_filename, dict_list, delimiter, verbose=False):
 
     with open(output_filename, 'w') as f:
         dict_writer = csv.DictWriter(f, fieldnames=dict_list[0].keys(),
-                                     dialect=dialect)
+                                     dialect=dialect, lineterminator='\n')
         dict_writer.writeheader()
         dict_writer.writerows(dict_list)
     if verbose:

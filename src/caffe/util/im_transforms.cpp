@@ -310,9 +310,57 @@ void UpdateBBoxByResizePolicy(const ResizeParameter& param,
 cv::Mat ApplyResize(const cv::Mat& in_img, const ResizeParameter& param) {
   cv::Mat out_img;
 
+  CHECK_EQ(param.has_height(), param.has_width());
+  if (param.has_min_scale() || param.has_max_scale()) {
+    CHECK_EQ(param.has_min_scale(), param.has_max_scale());
+    CHECK_NE(param.has_height(), param.has_min_scale());
+    CHECK_NE(param.has_min_shortest_side(), param.has_min_scale());
+    CHECK_GE(param.max_scale(), param.min_scale());
+    CHECK_GT(param.min_scale(), 0.);
+    CHECK_LE(param.min_scale(), 1.);
+  }
+  if (param.has_min_aspect_ratio() || param.has_max_aspect_ratio()) {
+    CHECK_EQ(param.has_min_aspect_ratio(), param.has_max_aspect_ratio());
+    CHECK_NE(param.has_height(), param.has_min_aspect_ratio());
+    CHECK_GE(param.max_aspect_ratio(), param.min_aspect_ratio());
+    CHECK_GT(param.min_aspect_ratio(), 0.);
+    CHECK_LT(param.max_aspect_ratio(), FLT_MAX);
+  }
+  CHECK_EQ(param.has_min_shortest_side(), param.has_max_shortest_side());
+
   // Reading parameters
-  const int new_height = param.height();
-  const int new_width = param.width();
+  int new_height = param.height();
+  int new_width = param.width();
+
+  if (param.has_min_scale() || param.has_min_aspect_ratio()) {
+    float scale = 1.f;
+    float aspect_ratio = 1.f;
+
+    if (param.has_min_scale()) {
+      caffe_rng_uniform(1, param.min_scale(), param.max_scale(), &scale);
+    }
+    if (param.has_min_aspect_ratio()) {
+      float min_aspect_ratio = std::max<float>(param.min_aspect_ratio(),
+        std::pow(scale, 2.));
+      float max_aspect_ratio = std::min<float>(param.max_aspect_ratio(),
+        1 / std::pow(scale, 2.));
+      caffe_rng_uniform(1, min_aspect_ratio, max_aspect_ratio, &aspect_ratio);
+    }
+    new_width = floor(in_img.cols * scale * sqrt(aspect_ratio));
+    new_height = floor(in_img.rows * scale / sqrt(aspect_ratio));
+  }
+  else if (param.has_min_shortest_side() && param.has_max_shortest_side()) {
+    float side = 0;
+    caffe_rng_uniform(1, (float)param.min_shortest_side(), (float)param.max_shortest_side(), &side);
+    if (in_img.rows > in_img.cols) {
+      new_width = side;
+      new_height = round((side / in_img.cols) * in_img.rows);
+    }
+    else {
+      new_height = side;
+      new_width = round((side / in_img.rows) * in_img.cols);
+    }
+  }
 
   int pad_mode = cv::BORDER_CONSTANT;
   switch (param.pad_mode()) {

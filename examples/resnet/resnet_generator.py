@@ -1,0 +1,443 @@
+#!/usr/bin/env python
+"""
+Generate the residule learning network.
+Author: Yemin Shi
+Email: shiyemin@pku.edu.cn
+
+MSRA Paper: http://arxiv.org/pdf/1512.03385v1.pdf
+"""
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+import math
+
+def parse_args():
+    """Parse input arguments
+    """
+
+    parser = ArgumentParser(description=__doc__,
+                            formatter_class=ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('solver_file',
+                        help='Output solver.prototxt file')
+    parser.add_argument('train_val_file',
+                        help='Output train_val.prototxt file')
+    parser.add_argument('--layer_number', nargs='*', type=int,
+                        help=('Layer number for each layer stage. use --layer_number 2 4 6 3 for resnet 50 see paper for others'),
+                        default=[3, 8, 36, 3])
+    parser.add_argument('-t', '--type', type=int,
+                        help=('0 for deploy.prototxt, 1 for train_val.prototxt.'),
+                        default=1)
+    parser.add_argument('-simple_resnet', '--simple_resnet', type=int,
+                        help=('1 for simple resnet blocks i.e. resnet 18, 34.'),
+                        default=1)   
+
+    args = parser.parse_args()
+    return args
+
+def generate_data_layer():
+    data_layer_str = '''name: "ResNet"
+layer {
+  name: "data"
+  type: "Data"
+  top: "data"
+  top: "label"
+  include {
+    phase: TRAIN
+  }
+  transform_param {
+    mirror: true
+    crop_size: 224
+    mean_value: 129.1863
+    mean_value: 104.7624
+    mean_value: 93.594
+  }
+  data_param {
+    source: "/host-ssd1TBB/vgg-face-crop-lmdb/ilsvrc12_train_lmdb"
+    batch_size: 256
+    backend: LMDB
+  }
+}
+layer {
+  name: "data"
+  type: "Data"
+  top: "data"
+  top: "label"
+  include {
+    phase: TEST
+  }
+  transform_param {
+    mirror: false
+    crop_size: 224
+    mean_value: 129.1863
+    mean_value: 104.7624
+    mean_value: 93.594
+  }
+  data_param {
+    source: "/host-ssd1TBB/vgg-face-crop-lmdb/ilsvrc12_val_lmdb"
+    batch_size: 128
+    backend: LMDB
+  }
+}'''
+    return data_layer_str
+
+def generate_conv_layer(kernel_size, kernel_num, stride, pad, layer_name, bottom, top, filler="xavier", bias=False):
+  if bias:
+    bias_str = "true"
+  else:
+    bias_str = "false"
+    
+  if filler == "gaussian":
+    filler_std = math.sqrt(2.0 / (kernel_size*kernel_size*kernel_num))
+    conv_layer_str = '''\nlayer {
+      name: "%s"
+      type: "Convolution"
+      bottom: "%s"
+      top: "%s"
+      convolution_param {
+        num_output: %d
+        pad: %d
+        kernel_size: %d
+        stride: %d
+        bias_term: %s
+        weight_filler {
+          type: "%s"
+          std: %f
+        }
+        bias_filler {
+          type: "constant"
+          value: 0.0
+        }
+      }
+    }'''%(layer_name, bottom, top, kernel_num, pad, kernel_size, stride, bias_str, filler, filler_std)
+  else:
+    conv_layer_str = '''\nlayer {
+  name: "%s"
+  type: "Convolution"
+  bottom: "%s"
+  top: "%s"
+  convolution_param {
+    num_output: %d
+    pad: %d
+    kernel_size: %d
+    stride: %d
+    bias_term: %s
+    weight_filler {
+      type: "%s"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.2
+    }
+  }
+}'''%(layer_name, bottom, top, kernel_num, pad, kernel_size, stride, bias_str, filler)
+  
+  return conv_layer_str
+
+def generate_pooling_layer(kernel_size, stride, pool_type, layer_name, bottom, top):
+    pool_layer_str = '''\nlayer {
+  name: "%s"
+  type: "Pooling"
+  bottom: "%s"
+  top: "%s"
+  pooling_param {
+    pool: %s
+    kernel_size: %d
+    stride: %d
+  }
+}'''%(layer_name, bottom, top, pool_type, kernel_size, stride)
+    return pool_layer_str
+
+def generate_fc_layer(num_output, layer_name, bottom, top, filler="xavier"):
+    fc_layer_str = '''\nlayer {
+  name: "%s"
+  type: "InnerProduct"
+  bottom: "%s"
+  top: "%s"
+  inner_product_param {
+     num_output: %d
+     weight_filler {
+       type: "%s"
+     }
+     bias_filler {
+       type: "constant"
+       value: 0
+     }
+  }
+}'''%(layer_name, bottom, top, num_output, filler)
+    return fc_layer_str
+
+def generate_eltwise_layer(layer_name, bottom_1, bottom_2, top, op_type="SUM"):
+    eltwise_layer_str = '''\nlayer {
+  name: "%s"
+  type: "Eltwise"
+  bottom: "%s"
+  bottom: "%s"
+  top: "%s"
+  eltwise_param {
+    operation: %s
+  }
+}'''%(layer_name, bottom_1, bottom_2, top, op_type)
+    return eltwise_layer_str
+
+def generate_activation_layer(layer_name, bottom, top, act_type="ReLU"):
+    act_layer_str = '''\nlayer {
+  name: "%s"
+  type: "%s"
+  bottom: "%s"
+  top: "%s"
+}'''%(layer_name, act_type, bottom, top)
+    return act_layer_str
+
+def generate_softmax_loss(bottom):
+    softmax_loss_str = '''layer {
+  name: "loss"
+  type: "SoftmaxWithLoss"
+  bottom: "%s"
+  bottom: "label"
+  top: "loss"
+}
+layer {
+  name: "acc/top-1"
+  type: "Accuracy"
+  bottom: "%s"
+  bottom: "label"
+  top: "acc/top-1"
+  include {
+    phase: TEST
+  }
+}
+layer {
+  name: "acc/top-5"
+  type: "Accuracy"
+  bottom: "%s"
+  bottom: "label"
+  top: "acc/top-5"
+  include {
+    phase: TEST
+  }
+  accuracy_param {
+    top_k: 5
+  }
+}'''%(bottom, bottom, bottom)
+    return softmax_loss_str
+
+def generate_bn_layer(layer_name, bottom, top):
+    bn_layer_str = '''\nlayer {
+  name: "%s"
+  type: "BatchNorm"
+  bottom: "%s"
+  top: "%s"
+  batch_norm_param {
+  }
+}'''%(layer_name, bottom, top)
+    return bn_layer_str
+
+def generate_scale_layer(layer_name, bottom, top):
+    scale_layer_str = '''\nlayer{
+  name: "%s"
+  type: "Scale"
+  bottom: "%s"
+  top: "%s"
+  scale_param {
+    bias_term: true
+  }
+}'''%(layer_name, bottom, top)
+    return scale_layer_str
+
+def generate_conv_unit(kernel_size, kernel_num, stride, pad, name, bottom, add_relu=True, conv_bias=False):
+    uint_str = generate_conv_layer(kernel_size, kernel_num, stride, pad, name, bottom, name, "gaussian", conv_bias)
+    uint_str += generate_bn_layer(name+'_bn', name, name)
+    uint_str += generate_scale_layer(name+'_scale', name, name)
+    if add_relu:
+        uint_str += generate_activation_layer(name+'_relu', name, name, 'ReLU')
+    return uint_str
+    
+def generate_simple_resnet():
+    args = parse_args()
+    network_str = generate_data_layer()
+    '''before stage'''
+    last_top = 'data'
+    network_str += generate_conv_unit(7, 64, 2, 3, 'conv1', last_top, True, True)
+    network_str += generate_pooling_layer(3, 2, 'MAX', 'pool1', 'conv1', 'pool1')
+    '''stage 1'''
+    last_top = 'pool1'
+    last_output = 'pool1'
+    for n in xrange(1, args.layer_number[0]+1):
+        network_str += generate_conv_unit(3, 64, 1, 1, 'conv2_%d_1'%n, last_top)
+        network_str += generate_conv_unit(3, 64, 1, 1, 'conv2_%d_2'%n, 'conv2_%d_1'%n, False)
+        network_str += generate_eltwise_layer('conv2_%d_sum'%n, last_output, 'conv2_%d_2'%n, 'conv2_%d_sum'%n, 'SUM')
+        network_str += generate_activation_layer('conv2_%d_sum_relu'%n, 'conv2_%d_sum'%n, 'conv2_%d_sum'%n, 'ReLU')
+        last_top = 'conv2_%d_sum'%n
+        last_output = 'conv2_%d_sum'%n
+    
+    network_str += generate_conv_unit(1, 128, 2, 0, 'conv2_output', last_top, False)
+    last_output = 'conv2_output'
+    
+    '''stage 2'''
+    network_str += generate_conv_unit(3, 128, 2, 1, 'conv3_1_1', last_top)
+    network_str += generate_conv_unit(3, 128, 1, 1, 'conv3_1_2', 'conv3_1_1', False)
+    network_str += generate_eltwise_layer('conv3_1_sum', last_output, 'conv3_1_2', 'conv3_1_sum', 'SUM')
+    network_str += generate_activation_layer('conv3_1_sum_relu', 'conv3_1_sum', 'conv3_1_sum', 'ReLU')
+    last_top = 'conv3_1_sum'
+    
+    for n in xrange(2, args.layer_number[1]+1):
+        network_str += generate_conv_unit(3, 128, 1, 1, 'conv3_%d_1'%n, last_top)
+        network_str += generate_conv_unit(3, 128, 1, 1, 'conv3_%d_2'%n, 'conv3_%d_1'%n, False)
+        network_str += generate_eltwise_layer('conv3_%d_sum'%n, last_top, 'conv3_%d_2'%n, 'conv3_%d_sum'%n, 'SUM')
+        network_str += generate_activation_layer('conv3_%d_sum_relu'%n, 'conv3_%d_sum'%n, 'conv3_%d_sum'%n, 'ReLU')
+        last_top = 'conv3_%d_sum'%n
+    
+    network_str += generate_conv_unit(1, 256, 2, 0, 'conv3_output', last_top, False)
+    last_output = 'conv3_output'
+    
+    '''stage 3'''
+    network_str += generate_conv_unit(3, 256, 2, 1, 'conv4_1_1', last_top)
+    network_str += generate_conv_unit(3, 256, 1, 1, 'conv4_1_2', 'conv4_1_1', False)
+    network_str += generate_eltwise_layer('conv4_1_sum', last_output, 'conv4_1_2', 'conv4_1_sum', 'SUM')
+    network_str += generate_activation_layer('conv4_1_sum_relu', 'conv4_1_sum', 'conv4_1_sum', 'ReLU')
+    last_top = 'conv4_1_sum'
+    for n in xrange(2, args.layer_number[2]+1):
+        network_str += generate_conv_unit(3, 256, 1, 1, 'conv4_%d_1'%n, last_top)
+        network_str += generate_conv_unit(3, 256, 1, 1, 'conv4_%d_2'%n, 'conv4_%d_1'%n, False)
+        network_str += generate_eltwise_layer('conv4_%d_sum'%n, last_top, 'conv4_%d_2'%n, 'conv4_%d_sum'%n, 'SUM')
+        network_str += generate_activation_layer('conv4_%d_sum_relu'%n, 'conv4_%d_sum'%n, 'conv4_%d_sum'%n, 'ReLU')
+        last_top = 'conv4_%d_sum'%n
+        
+    network_str += generate_conv_unit(1, 512, 2, 0, 'conv4_output', last_top, False)
+    last_output = 'conv4_output'
+    
+    '''stage 4'''
+    network_str += generate_conv_unit(3, 512, 2, 1, 'conv5_1_1', last_top)
+    network_str += generate_conv_unit(3, 512, 1, 1, 'conv5_1_2', 'conv5_1_1', False)    
+    network_str += generate_eltwise_layer('conv5_1_sum', last_output, 'conv5_1_2', 'conv5_1_sum', 'SUM')
+    network_str += generate_activation_layer('conv5_1_sum_relu', 'conv5_1_sum', 'conv5_1_sum', 'ReLU')
+    last_top = 'conv5_1_sum'
+    for l in xrange(2, args.layer_number[3]+1):
+        network_str += generate_conv_unit(3, 512, 1, 1, 'conv5_%d_1'%l, last_top)
+        network_str += generate_conv_unit(3, 512, 1, 1, 'conv5_%d_2'%l, 'conv5_%d_1'%l, False)
+        network_str += generate_eltwise_layer('conv5_%d_sum'%l, last_top, 'conv5_%d_2'%l, 'conv5_%d_sum'%l, 'SUM')
+        network_str += generate_activation_layer('conv5_%d_sum_relu'%l, 'conv5_%d_sum'%l, 'conv5_%d_sum'%l, 'ReLU')
+        last_top = 'conv5_%d_sum'%l
+        
+    network_str += generate_pooling_layer(7, 1, 'AVE', 'pool2', last_top, 'pool2')
+    network_str += generate_fc_layer(1000, 'fc', 'pool2', 'fc')
+    network_str += generate_softmax_loss('fc')
+    return network_str
+    
+def generate_complex_resnet():
+    args = parse_args()
+    network_str = generate_data_layer()
+    '''before stage'''
+    last_top = 'data'
+    network_str += generate_conv_unit(7, 64, 2, 3, 'conv1', last_top, True, True)
+    network_str += generate_pooling_layer(3, 2, 'MAX', 'pool1', 'conv1', 'pool1')
+    '''stage 1'''
+    last_top = 'pool1'
+    network_str += generate_conv_layer(1, 256, 1, 0, 'conv1_output', last_top, 'conv1_output')
+    network_str += generate_bn_layer('conv1_output_bn', 'conv1_output', 'conv1_output')
+    network_str += generate_scale_layer('conv1_output_scale', 'conv1_output', 'conv1_output')
+    last_output = 'conv1_output'
+    for n in xrange(1, args.layer_number[0]+1):
+        network_str += generate_conv_unit(1, 64, 1, 0, 'conv2_%d_1'%n, last_top)
+        network_str += generate_conv_unit(3, 64, 1, 1, 'conv2_%d_2'%n, 'conv2_%d_1'%n)
+        network_str += generate_conv_unit(1, 256, 1, 0, 'conv2_%d_3'%n, 'conv2_%d_2'%n, False)
+        network_str += generate_eltwise_layer('conv2_%d_sum'%n, last_output, 'conv2_%d_3'%n, 'conv2_%d_sum'%n, 'SUM')
+        network_str += generate_activation_layer('conv2_%d_sum_relu'%n, 'conv2_%d_sum'%n, 'conv2_%d_sum'%n, 'ReLU')
+        last_top = 'conv2_%d_sum'%n
+        last_output = 'conv2_%d_sum'%n
+    
+    network_str += generate_conv_unit(1, 512, 2, 0, 'conv2_output', last_top, False)
+    last_output = 'conv2_output'
+    
+    '''stage 2'''
+    network_str += generate_conv_unit(1, 128, 2, 0, 'conv3_1_1', last_top)
+    network_str += generate_conv_unit(3, 128, 1, 1, 'conv3_1_2', 'conv3_1_1')
+    network_str += generate_conv_unit(1, 512, 1, 0, 'conv3_1_3', 'conv3_1_2', False)
+    network_str += generate_eltwise_layer('conv3_1_sum', last_output, 'conv3_1_3', 'conv3_1_sum', 'SUM')
+    network_str += generate_activation_layer('conv3_1_sum_relu', 'conv3_1_sum', 'conv3_1_sum', 'ReLU')
+    last_top = 'conv3_1_sum'
+    
+    for n in xrange(2, args.layer_number[1]+1):
+        network_str += generate_conv_unit(1, 128, 1, 0, 'conv3_%d_1'%n, last_top)
+        network_str += generate_conv_unit(3, 128, 1, 1, 'conv3_%d_2'%n, 'conv3_%d_1'%n)
+        network_str += generate_conv_unit(1, 512, 1, 0, 'conv3_%d_3'%n, 'conv3_%d_2'%n, False)
+        network_str += generate_eltwise_layer('conv3_%d_sum'%n, last_top, 'conv3_%d_3'%n, 'conv3_%d_sum'%n, 'SUM')
+        network_str += generate_activation_layer('conv3_%d_sum_relu'%n, 'conv3_%d_sum'%n, 'conv3_%d_sum'%n, 'ReLU')
+        last_top = 'conv3_%d_sum'%n
+    
+    network_str += generate_conv_unit(1, 1024, 2, 0, 'conv3_output', last_top, False)
+    last_output = 'conv3_output'
+    
+    '''stage 3'''
+    network_str += generate_conv_unit(1, 256, 2, 0, 'conv4_1_1', last_top)
+    network_str += generate_conv_unit(3, 256, 1, 1, 'conv4_1_2', 'conv4_1_1')
+    network_str += generate_conv_unit(1, 1024, 1, 0, 'conv4_1_3', 'conv4_1_2', False)
+    network_str += generate_eltwise_layer('conv4_1_sum', last_output, 'conv4_1_3', 'conv4_1_sum', 'SUM')
+    network_str += generate_activation_layer('conv4_1_sum_relu', 'conv4_1_sum', 'conv4_1_sum', 'ReLU')
+    last_top = 'conv4_1_sum'
+    for n in xrange(2, args.layer_number[2]+1):
+        network_str += generate_conv_unit(1, 256, 1, 0, 'conv4_%d_1'%n, last_top)
+        network_str += generate_conv_unit(3, 256, 1, 1, 'conv4_%d_2'%n, 'conv4_%d_1'%n)
+        network_str += generate_conv_unit(1, 1024, 1, 0, 'conv4_%d_3'%n, 'conv4_%d_2'%n, False)
+        network_str += generate_eltwise_layer('conv4_%d_sum'%n, last_top, 'conv4_%d_3'%n, 'conv4_%d_sum'%n, 'SUM')
+        network_str += generate_activation_layer('conv4_%d_sum_relu'%n, 'conv4_%d_sum'%n, 'conv4_%d_sum'%n, 'ReLU')
+        last_top = 'conv4_%d_sum'%n
+        
+    network_str += generate_conv_unit(1, 2048, 2, 0, 'conv4_output', last_top, False)
+    last_output = 'conv4_output'
+    
+    '''stage 4'''
+    network_str += generate_conv_unit(1, 512, 2, 0, 'conv5_1_1', last_top)
+    network_str += generate_conv_unit(3, 512, 1, 1, 'conv5_1_2', 'conv5_1_1')    
+    network_str += generate_conv_unit(1, 2048, 1, 0, 'conv5_1_3', 'conv5_1_2', False)
+    network_str += generate_eltwise_layer('conv5_1_sum', last_output, 'conv5_1_3', 'conv5_1_sum', 'SUM')
+    network_str += generate_activation_layer('conv5_1_sum_relu', 'conv5_1_sum', 'conv5_1_sum', 'ReLU')
+    last_top = 'conv5_1_sum'
+    for l in xrange(2, args.layer_number[3]+1):
+        network_str += generate_conv_unit(1, 512, 1, 0, 'conv5_%d_1'%l, last_top)
+        network_str += generate_conv_unit(3, 512, 1, 1, 'conv5_%d_2'%l, 'conv5_%d_1'%l)
+        network_str += generate_conv_unit(1, 2048, 1, 0, 'conv5_%d_3'%l, 'conv5_%d_2'%l, False)
+        network_str += generate_eltwise_layer('conv5_%d_sum'%l, last_top, 'conv5_%d_3'%l, 'conv5_%d_sum'%l, 'SUM')
+        network_str += generate_activation_layer('conv5_%d_sum_relu'%l, 'conv5_%d_sum'%l, 'conv5_%d_sum'%l, 'ReLU')
+        last_top = 'conv5_%d_sum'%l
+        
+    network_str += generate_pooling_layer(7, 1, 'AVE', 'pool2', last_top, 'pool2')
+    network_str += generate_fc_layer(1000, 'fc', 'pool2', 'fc')
+    network_str += generate_softmax_loss('fc')
+    return network_str
+
+def generate_solver(train_val_name):
+    solver_str = '''net: "%s"
+test_iter: 1000
+test_interval: 6000
+test_initialization: false
+display: 40
+average_loss: 40
+base_lr: 0.1
+lr_policy: "step"
+stepsize: 100000
+gamma: 0.1
+max_iter: 600000
+momentum: 0.9
+weight_decay: 0.0001
+snapshot: 10000
+snapshot_prefix: "resnet_50"
+solver_mode: GPU'''%(train_val_name)
+    return solver_str
+
+def main():
+    args = parse_args()
+    if args.simple_resnet:
+      solver_str = generate_solver(args.train_val_file)
+      network_str = generate_simple_resnet()    
+    else:
+      solver_str = generate_solver(args.train_val_file)
+      network_str = generate_complex_resnet()
+    fp = open(args.solver_file, 'w')
+    fp.write(solver_str)
+    fp.close()
+    fp = open(args.train_val_file, 'w')
+    fp.write(network_str)
+    fp.close()
+
+if __name__ == '__main__':
+    main()
