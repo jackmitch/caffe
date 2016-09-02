@@ -614,8 +614,8 @@ int ssdtest() {
 
         if (det.score >= detection_threshold && (det.label == FLAGS_ssd_label || FLAGS_ssd_label < 0))
         {
-          det.scale = std::min<float>(net_img_width / sub_imgs[n].width, 
-                                      net_img_height / sub_imgs[n].height);
+          det.scale = std::min<float>((float)net_img_width / sub_imgs[n].width, 
+                                      (float)net_img_height / sub_imgs[n].height);
           det.left = sub_imgs[n].x + result_vec[k + 3] * sub_imgs[n].width;
           det.top = sub_imgs[n].y + result_vec[k + 4] * sub_imgs[n].height;
           det.right = sub_imgs[n].x + result_vec[k + 5] * sub_imgs[n].width;
