@@ -162,14 +162,14 @@ NONEMPTY_WARN_REPORT := $(BUILD_DIR)/$(WARNS_EXT)
 ##############################
 # Derive include and lib directories
 ##############################
-CUDA_INCLUDE_DIR := $(CUDA_DIR)/include
+CUDA_INCLUDE_DIR := $(CUDA_DIR_TARGET)/include
 
 CUDA_LIB_DIR :=
 # add <cuda>/lib64 only if it exists
-ifneq ("$(wildcard $(CUDA_DIR)/lib64)","")
-	CUDA_LIB_DIR += $(CUDA_DIR)/lib64
+ifneq ("$(wildcard $(CUDA_DIR_TARGET)/lib64)","")
+	CUDA_LIB_DIR += $(CUDA_DIR_TARGET)/lib64
 endif
-CUDA_LIB_DIR += $(CUDA_DIR)/lib
+CUDA_LIB_DIR += $(CUDA_DIR_TARGET)/lib
 
 INCLUDE_DIRS += $(BUILD_INCLUDE_DIR) ./src ./include
 ifneq ($(CPU_ONLY), 1)
@@ -178,11 +178,12 @@ ifneq ($(CPU_ONLY), 1)
 	LIBRARIES := cudart cublas curand
 endif
 
-LIBRARIES += glog gflags protobuf boost_system boost_filesystem boost_regex m hdf5_hl hdf5
+LIBRARIES += glog gflags protobuf boost_system boost_filesystem boost_regex m
 
 # handle IO dependencies
 USE_LEVELDB ?= 1
 USE_LMDB ?= 1
+USE_HDF5 ?= 1
 USE_OPENCV ?= 1
 
 ifeq ($(USE_LEVELDB), 1)
@@ -191,13 +192,16 @@ endif
 ifeq ($(USE_LMDB), 1)
 	LIBRARIES += lmdb
 endif
+ifeq ($(USE_HDF5), 1)
+	LIBRARIES += hdf5_hl hdf5
+endif
 ifeq ($(USE_OPENCV), 1)
 	LIBRARIES += opencv_core opencv_highgui opencv_imgproc
 
 	ifeq ($(OPENCV_VERSION), 3)
 		LIBRARIES += opencv_imgcodecs opencv_videoio
 	endif
-		
+
 endif
 PYTHON_LIBRARIES ?= boost_python python2.7
 WARNINGS := -Wall -Wno-sign-compare
@@ -272,7 +276,7 @@ endif
 ifeq ($(OSX), 1)
 	CXX := /usr/bin/clang++
 	ifneq ($(CPU_ONLY), 1)
-		CUDA_VERSION := $(shell $(CUDA_DIR)/bin/nvcc -V | grep -o 'release [0-9.]*' | tr -d '[a-z ]')
+		CUDA_VERSION := $(shell $(CUDA_DIR_HOST)/bin/nvcc -V | grep -o 'release [0-9.]*' | tr -d '[a-z ]')
 		ifeq ($(shell echo | awk '{exit $(CUDA_VERSION) < 7.0;}'), 1)
 			CXXFLAGS += -stdlib=libstdc++
 			LINKFLAGS += -stdlib=libstdc++
@@ -341,6 +345,9 @@ ifeq ($(ALLOW_LMDB_NOLOCK), 1)
 	COMMON_FLAGS += -DALLOW_LMDB_NOLOCK
 endif
 endif
+ifeq ($(USE_HDF5), 1)
+	COMMON_FLAGS += -DUSE_HDF5
+endif
 
 # CPU-only configuration
 ifeq ($(CPU_ONLY), 1)
@@ -403,7 +410,7 @@ CXXFLAGS += -MMD -MP
 # Complete build flags.
 COMMON_FLAGS += $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir))
 CXXFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
-NVCCFLAGS += -ccbin=$(CXX) -Xcompiler -fPIC $(COMMON_FLAGS)
+NVCCFLAGS += -ccbin="$(NVCXX)" -Xcompiler "-fPIC $(COMMON_FLAGS) $(NVCXXFLAGS)"
 # mex may invoke an older gcc that is too liberal with -Wuninitalized
 MATLAB_CXXFLAGS := $(CXXFLAGS) -Wno-uninitialized
 LINKFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
@@ -583,9 +590,9 @@ $(PROTO_BUILD_DIR)/%.pb.o: $(PROTO_BUILD_DIR)/%.pb.cc $(PROTO_GEN_HEADER) \
 
 $(BUILD_DIR)/cuda/%.o: %.cu | $(ALL_BUILD_DIRS)
 	@ echo NVCC $<
-	$(Q)$(CUDA_DIR)/bin/nvcc $(NVCCFLAGS) $(CUDA_ARCH) -M $< -o ${@:.o=.d} \
+	$(Q)$(CUDA_DIR_HOST)/bin/nvcc $(NVCCFLAGS) $(CUDA_ARCH) -M $< -o ${@:.o=.d} \
 		-odir $(@D)
-	$(Q)$(CUDA_DIR)/bin/nvcc $(NVCCFLAGS) $(CUDA_ARCH) -c $< -o $@ 2> $@.$(WARNS_EXT) \
+	$(Q)$(CUDA_DIR_HOST)/bin/nvcc $(NVCCFLAGS) $(CUDA_ARCH) -c $< -o $@ 2> $@.$(WARNS_EXT) \
 		|| (cat $@.$(WARNS_EXT); exit 1)
 	@ cat $@.$(WARNS_EXT)
 
