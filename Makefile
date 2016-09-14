@@ -24,6 +24,14 @@ else
 	OTHER_BUILD_DIR := $(DEBUG_BUILD_DIR)
 endif
 
+ifndef CUDA_DIR_HOST
+	CUDA_DIR_HOST := $(CUDA_DIR)
+endif
+
+ifndef CUDA_DIR_TARGET
+	CUDA_DIR_TARGET := $(CUDA_DIR)
+endif
+
 # All of the directories containing code.
 SRC_DIRS := $(shell find * -type d -exec bash -c "find {} -maxdepth 1 \
 	\( -name '*.cpp' -o -name '*.proto' \) | grep -q ." \; -print)
@@ -409,6 +417,14 @@ LIBRARY_DIRS += $(LIB_BUILD_DIR)
 
 # Automatic dependency generation (nvcc is handled separately)
 CXXFLAGS += -MMD -MP
+
+ifndef NVCXXFLAGS
+	NVCXXFLAGS := $(CXXFLAGS)
+endif
+
+ifndef NVCXX
+	NVCXX := $(CXX)
+endif
 
 # Complete build flags.
 COMMON_FLAGS += $(foreach includedir,$(INCLUDE_DIRS),-isystem $(includedir))
