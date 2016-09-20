@@ -31,6 +31,7 @@ void ScaleLayer<Dtype>::Forward_gpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   const int count = top[0]->count();
   const Dtype* bottom_data = bottom[0]->gpu_data();
+#ifndef FEED_FORWARD_ONLY  
   if (bottom[0] == top[0]) {
     // in-place computation; need to store bottom data before overwriting it.
     // Note that this is only necessary for Backward; we could skip this if not
@@ -39,6 +40,7 @@ void ScaleLayer<Dtype>::Forward_gpu(
     caffe_copy(bottom[0]->count(), bottom[0]->gpu_data(),
                temp_.mutable_gpu_data());
   }
+#endif
   const Dtype* scale_data =
       ((bottom.size() > 1) ? bottom[1] : this->blobs_[0].get())->gpu_data();
   Dtype* top_data = top[0]->mutable_gpu_data();
@@ -58,6 +60,7 @@ void ScaleLayer<Dtype>::Forward_gpu(
 template <typename Dtype>
 void ScaleLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+#ifndef FEED_FORWARD_ONLY    
   if (bias_layer_ &&
       this->param_propagate_down_[this->param_propagate_down_.size() - 1]) {
     bias_layer_->Backward(top, bias_propagate_down_, bias_bottom_vec_);
@@ -128,6 +131,9 @@ void ScaleLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
         <<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>(
         count, top_diff, scale_data, scale_dim_, inner_dim_, bottom_diff);
   }
+#else
+  CHECK_EQ(1, 0);
+#endif  
 }
 
 INSTANTIATE_LAYER_GPU_FUNCS(ScaleLayer);
