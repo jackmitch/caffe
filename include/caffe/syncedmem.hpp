@@ -13,12 +13,14 @@ namespace caffe {
 // but might be more significant for parallel training. Most importantly,
 // it improved stability for large models on many GPUs.
 inline void CaffeMallocHost(void** ptr, size_t size, bool* use_cuda) {
+#ifndef FEED_FORWARD_ONLY
 #ifndef CPU_ONLY
   if (Caffe::mode() == Caffe::GPU) {
     CUDA_CHECK(cudaMallocHost(ptr, size));
     *use_cuda = true;
     return;
   }
+#endif
 #endif
   *ptr = malloc(size);
   *use_cuda = false;
