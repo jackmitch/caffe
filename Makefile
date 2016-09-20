@@ -356,6 +356,9 @@ endif
 ifeq ($(USE_HDF5), 1)
 	COMMON_FLAGS += -DUSE_HDF5
 endif
+ifeq ($(FEED_FORWARD_ONLY), 1)
+    COMMON_FLAGS += -DFEED_FORWARD_ONLY
+endif
 
 # CPU-only configuration
 ifeq ($(CPU_ONLY), 1)
