@@ -73,4 +73,52 @@ INSTANTIATE_CLASS(HDF5OutputLayer);
 REGISTER_LAYER_CLASS(HDF5Output);
 
 }  // namespace caffe
+
+#else
+#include <vector>
+
+#include "hdf5.h"
+#include "hdf5_hl.h"
+
+#include "caffe/layers/hdf5_output_layer.hpp"
+#include "caffe/util/hdf5.hpp"
+
+namespace caffe {
+
+  template <typename Dtype>
+  void HDF5OutputLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+    const vector<Blob<Dtype>*>& top) {
+    NOT_IMPLEMENTED;
+  }
+
+  template <typename Dtype>
+  HDF5OutputLayer<Dtype>::~HDF5OutputLayer<Dtype>() {
+    NOT_IMPLEMENTED;
+  }
+
+  template <typename Dtype>
+  void HDF5OutputLayer<Dtype>::SaveBlobs() {
+    NOT_IMPLEMENTED;
+  }
+
+  template <typename Dtype>
+  void HDF5OutputLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+    const vector<Blob<Dtype>*>& top) {
+    NOT_IMPLEMENTED;
+  }
+
+  template <typename Dtype>
+  void HDF5OutputLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
+    const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+    NOT_IMPLEMENTED;
+  }
+
+#ifdef CPU_ONLY
+  STUB_GPU(HDF5OutputLayer);
+#endif
+
+  INSTANTIATE_CLASS(HDF5OutputLayer);
+  REGISTER_LAYER_CLASS(HDF5Output);
+
+}  // namespace caffe
 #endif  // USE_HDF5

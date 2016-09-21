@@ -165,4 +165,47 @@ INSTANTIATE_CLASS(HDF5DataLayer);
 REGISTER_LAYER_CLASS(HDF5Data);
 
 }  // namespace caffe
+#else
+#include <fstream>  // NOLINT(readability/streams)
+#include <string>
+#include <vector>
+
+#include "hdf5.h"
+#include "hdf5_hl.h"
+#include "stdint.h"
+
+#include "caffe/layers/hdf5_data_layer.hpp"
+#include "caffe/util/hdf5.hpp"
+
+namespace caffe {
+
+  template <typename Dtype>
+  HDF5DataLayer<Dtype>::~HDF5DataLayer<Dtype>() { }
+
+  // Load data and label from HDF5 filename into the class property blobs.
+  template <typename Dtype>
+  void HDF5DataLayer<Dtype>::LoadHDF5FileData(const char* filename) {
+    NOT_IMPLEMENTED;
+  }
+
+  template <typename Dtype>
+  void HDF5DataLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+    const vector<Blob<Dtype>*>& top) {
+    NOT_IMPLEMENTED;
+  }
+
+  template <typename Dtype>
+  void HDF5DataLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+    const vector<Blob<Dtype>*>& top) {
+    NOT_IMPLEMENTED;
+  }
+
+#ifdef CPU_ONLY
+  STUB_GPU_FORWARD(HDF5DataLayer, Forward);
+#endif
+
+  INSTANTIATE_CLASS(HDF5DataLayer);
+  REGISTER_LAYER_CLASS(HDF5Data);
+
+}  // namespace caffe
 #endif  // USE_HDF5
