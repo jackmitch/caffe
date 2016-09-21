@@ -38,4 +38,27 @@ void HDF5OutputLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 INSTANTIATE_LAYER_GPU_FUNCS(HDF5OutputLayer);
 
 }  // namespace caffe
+
+#else
+
+#include <vector>
+#include "caffe/layers/hdf5_output_layer.hpp"
+
+namespace caffe {
+
+  template <typename Dtype>
+  void HDF5OutputLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+    const vector<Blob<Dtype>*>& top) {
+    NOT_IMPLEMETED;
+  }
+
+  template <typename Dtype>
+  void HDF5OutputLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
+    NOT_IMPLEMETED;
+  }
+
+  INSTANTIATE_LAYER_GPU_FUNCS(HDF5OutputLayer);
+
+}  // namespace caffe
+
 #endif  // USE_HDF5
