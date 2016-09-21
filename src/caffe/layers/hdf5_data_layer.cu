@@ -61,7 +61,7 @@ namespace caffe {
   template <typename Dtype>
   void HDF5DataLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
-    NOT_IMPLEMENTED;
+
   }
 
   INSTANTIATE_LAYER_GPU_FUNCS(HDF5DataLayer);
