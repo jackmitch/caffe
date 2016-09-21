@@ -1,6 +1,10 @@
 #ifndef CAFFE_HDF5_OUTPUT_LAYER_HPP_
 #define CAFFE_HDF5_OUTPUT_LAYER_HPP_
 
+#ifdef USE_HDF5
+#include "hdf5.h"
+#endif
+
 #include <string>
 #include <vector>
 

@@ -1,7 +1,9 @@
 #ifndef CAFFE_HDF5_DATA_LAYER_HPP_
 #define CAFFE_HDF5_DATA_LAYER_HPP_
 
+#ifdef USE_HDF5
 #include "hdf5.h"
+#endif
 
 #include <string>
 #include <vector>
@@ -51,7 +53,9 @@ class HDF5DataLayer : public Layer<Dtype> {
   std::vector<std::string> hdf_filenames_;
   unsigned int num_files_;
   unsigned int current_file_;
+#ifdef USE_HDF5
   hsize_t current_row_;
+#endif
   std::vector<shared_ptr<Blob<Dtype> > > hdf_blobs_;
   std::vector<unsigned int> data_permutation_;
   std::vector<unsigned int> file_permutation_;
