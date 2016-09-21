@@ -170,8 +170,6 @@ REGISTER_LAYER_CLASS(HDF5Data);
 #include <string>
 #include <vector>
 
-#include "hdf5.h"
-#include "hdf5_hl.h"
 #include "stdint.h"
 
 #include "caffe/layers/hdf5_data_layer.hpp"

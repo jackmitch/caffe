@@ -77,9 +77,6 @@ REGISTER_LAYER_CLASS(HDF5Output);
 #else
 #include <vector>
 
-#include "hdf5.h"
-#include "hdf5_hl.h"
-
 #include "caffe/layers/hdf5_output_layer.hpp"
 #include "caffe/util/hdf5.hpp"
 
