@@ -20,7 +20,7 @@ var readLogFile = function(logfile_path) {
     let stream = fs.createReadStream(path.join(__dirname, logfile_path)).pipe(split());
     let data = {
       labels: [],
-      series: [[], []]
+      series: [[], [], []]
     };
     let linecnt = 0;
     let isTest = false;
@@ -42,8 +42,11 @@ var readLogFile = function(logfile_path) {
         if(isTest) {
           data.series[0].push(parseFloat(tuple[3]));
           data.series[1].push(parseFloat(tuple[4]));
+          data.series[2].push(parseFloat(tuple[5]));
         } else {
           data.series[0].push(parseFloat(tuple[3]));
+          data.series[1].push(parseFloat(tuple[4]));
+          data.series[2].push(parseFloat(tuple[5]));
         }
       }
     });
