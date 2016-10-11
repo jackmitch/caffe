@@ -44,7 +44,7 @@ function plotTest(data) {
 
 function plot() {
   $('.ct-chart').empty();
-  $.get('/api')
+  $.get('/data')
     .done(function(res){
       var data = res.data;
       plotTraining(data[0]);
@@ -57,4 +57,12 @@ function plot() {
 
 $('.plot-btn').click(function() {
   plot();
+});
+
+$('#submitLogFile').click( function() {
+  $.post('/logfile', $('form#logFileForm').serialize(), 
+     function(data) {
+       plot();
+     },
+     'json');
 });

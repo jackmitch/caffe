@@ -9,6 +9,10 @@
 <body>
   <div class="container-fluid app">
     <button type="button" class="btn btn-default btn-xs plot-btn">plot</button>
+    <form action="#" method="post" name="logFileForm" id="logFileForm">
+      <input type="text" name="logFilePath", id="logFilePath", placeHolder="/tmp/caffe.INFO"/>
+      <input type="button" name="submitLogFile" id="submitLogFile" value="Submit" />
+    </form>
     <div>
       <h1>Training</h1>
       <div class="ct-chart-training-accuracy ct-major-twelfth"></div>
