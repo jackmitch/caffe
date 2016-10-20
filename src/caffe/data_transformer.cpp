@@ -444,7 +444,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   CHECK_EQ(channels, img_channels);
   CHECK_GE(num, 1);
 
-  CHECK(cv_img.depth() == CV_8U) << "Image data type must be unsigned byte";
+  CHECK(cv_img.depth() == CV_8U || cv_img.depth() == CV_32F) << "Image data type must be unsigned byte or float";
 
   const Dtype scale = param_.scale();
   *do_mirror = param_.mirror() && Rand(2);
@@ -524,31 +524,71 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
 
   Dtype* transformed_data = transformed_blob->mutable_cpu_data();
   int top_index;
-  for (int h = 0; h < height; ++h) {
-    const uchar* ptr = cv_cropped_image.ptr<uchar>(h);
-    int img_index = 0;
-    int h_idx = h;
-    for (int w = 0; w < width; ++w) {
-      int w_idx = w;
-      if (*do_mirror) {
-        w_idx = (width - 1 - w);
-      }
-      int h_idx_real = h_idx;
-      int w_idx_real = w_idx;
-      for (int c = 0; c < img_channels; ++c) {
-        top_index = (c * height + h_idx_real) * width + w_idx_real;
-        Dtype pixel = static_cast<Dtype>(ptr[img_index++]);
-        if (has_mean_file) {
-          int mean_index = (c * img_height + h_off + h_idx_real) * img_width
+
+  if (cv_img.depth() == CV_8U)
+  {
+    for (int h = 0; h < height; ++h) {
+      const uchar* ptr = cv_cropped_image.ptr<uchar>(h);
+      int img_index = 0;
+      int h_idx = h;
+      for (int w = 0; w < width; ++w) {
+        int w_idx = w;
+        if (*do_mirror) {
+          w_idx = (width - 1 - w);
+        }
+        int h_idx_real = h_idx;
+        int w_idx_real = w_idx;
+        for (int c = 0; c < img_channels; ++c) {
+          top_index = (c * height + h_idx_real) * width + w_idx_real;
+          Dtype pixel = static_cast<Dtype>(ptr[img_index++]);
+          if (has_mean_file) {
+            int mean_index = (c * img_height + h_off + h_idx_real) * img_width
               + w_off + w_idx_real;
-          transformed_data[top_index] =
-              (pixel - mean[mean_index]) * scale;
-        } else {
-          if (has_mean_values) {
             transformed_data[top_index] =
+              (pixel - mean[mean_index]) * scale;
+          }
+          else {
+            if (has_mean_values) {
+              transformed_data[top_index] =
                 (pixel - mean_values_[c]) * scale;
-          } else {
-            transformed_data[top_index] = pixel * scale;
+            }
+            else {
+              transformed_data[top_index] = pixel * scale;
+            }
+          }
+        }
+      }
+    }
+  }
+  else if (cv_img.depth() == CV_32F) {
+    for (int h = 0; h < height; ++h) {
+      const float* ptr = cv_cropped_image.ptr<float>(h);
+      int img_index = 0;
+      int h_idx = h;
+      for (int w = 0; w < width; ++w) {
+        int w_idx = w;
+        if (*do_mirror) {
+          w_idx = (width - 1 - w);
+        }
+        int h_idx_real = h_idx;
+        int w_idx_real = w_idx;
+        for (int c = 0; c < img_channels; ++c) {
+          top_index = (c * height + h_idx_real) * width + w_idx_real;
+          Dtype pixel = static_cast<Dtype>(ptr[img_index++]);
+          if (has_mean_file) {
+            int mean_index = (c * img_height + h_off + h_idx_real) * img_width
+              + w_off + w_idx_real;
+            transformed_data[top_index] =
+              (pixel - mean[mean_index]) * scale;
+          }
+          else {
+            if (has_mean_values) {
+              transformed_data[top_index] =
+                (pixel - mean_values_[c]) * scale;
+            }
+            else {
+              transformed_data[top_index] = pixel * scale;
+            }
           }
         }
       }
@@ -581,6 +621,8 @@ void DataTransformer<Dtype>::TransformInv(const Dtype* data, cv::Mat* cv_img,
       }
     }
   }
+
+  CHECK(cv_img->depth() == CV_8U) << "Image data type must be unisgned int";
 
   const int img_type = channels == 3 ? CV_8UC3 : CV_8UC1;
   cv::Mat orig_img(height, width, img_type, cv::Scalar(0, 0, 0));

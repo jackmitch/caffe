@@ -19,6 +19,7 @@
 
 #include "caffe/util/im_transforms.hpp"
 #include "caffe/util/math_functions.hpp"
+#include <glog/logging.h>
 
 namespace caffe {
 
@@ -226,6 +227,9 @@ cv::Mat AspectKeepingResizeBySmall(const cv::Mat& in_img,
 }
 
 void constantNoise(const int n, const vector<uchar>& val, cv::Mat* image) {
+
+  CHECK(image->depth() == CV_8U) << "Image data type must be unsigned int";
+
   const int cols = image->cols;
   const int rows = image->rows;
 
