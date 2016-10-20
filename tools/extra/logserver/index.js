@@ -8,9 +8,14 @@ let parse = require('csv-parse');
 let split = require('split');
 let express = require('express');
 let app = express();
+let bodyParser = require('body-parser');
 let pythonShell = require('python-shell');
 
 app.use(express.static(path.join(__dirname, client)));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
+  extended: true
+}));
 
 let logfile_path = "/tmp/caffe.INFO";
 let python_parser_path = '../parse_log.py';
@@ -20,7 +25,7 @@ var readLogFile = function(logfile_path) {
     let stream = fs.createReadStream(path.join(__dirname, logfile_path)).pipe(split());
     let data = {
       labels: [],
-      series: [[], []]
+      series: [[], [], []]
     };
     let linecnt = 0;
     let isTest = false;
@@ -42,22 +47,34 @@ var readLogFile = function(logfile_path) {
         if(isTest) {
           data.series[0].push(parseFloat(tuple[3]));
           data.series[1].push(parseFloat(tuple[4]));
+          data.series[2].push(parseFloat(tuple[5]));
         } else {
           data.series[0].push(parseFloat(tuple[3]));
+          data.series[1].push(parseFloat(tuple[4]));
+          data.series[2].push(parseFloat(tuple[5]));
         }
       }
     });
 
     stream.on('end', () => {
       resolve(data);
-      console.timeEnd('/api');
+      console.timeEnd('/data');
     });
   })
   
 }
 
-app.get('/api', (req, res, next) => {
-  console.time('/api');
+app.post('/logfile', (req, res, next) => {
+  console.time('/logfile');
+  if(req.query.logFilePath && req.query.logFilePath.length > 0) {
+    console.log('setting logfile to ' + req.query.logFilePath); 
+    logfile_path = req.query.logFilePath;
+  }
+  res.json({success: 'ok'});
+});
+
+app.get('/data', (req, res, next) => {
+  console.time('/data');
 
   // parse the current log file using the python script
   var options = {

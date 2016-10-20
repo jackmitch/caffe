@@ -62,8 +62,8 @@ train_data = data_root_dir + "lmdb/trainval_lmdb"
 # The database file for testing data. Created by data/VGG_FACE/create_data.sh
 test_data = data_root_dir + "lmdb/test_lmdb"
 # Specify the batch sampler.
-resize_width = 300
-resize_height = 300
+resize_width = 700
+resize_height = 700
 resize = "{}x{}".format(resize_width, resize_height)
 batch_sampler = [
         {
@@ -73,29 +73,29 @@ batch_sampler = [
                 'max_sample': 1,
         },
         {
-                'sampler': {
-                        'min_scale': 0.3,
-                        'max_scale': 1.0,
-                        'min_aspect_ratio': 0.5,
-                        'max_aspect_ratio': 2.0,
-                        },
-                'sample_constraint': {
-                        'min_jaccard_overlap': 0.1,
-                        },
-                'max_trials': 50,
-                'max_sample': 1,
+		'sampler': {
+			'min_scale': 0.3,
+			'max_scale': 1.0,
+			'min_aspect_ratio': 0.5,
+			'max_aspect_ratio': 2.0,
+		},
+		'max_trials': 1,
+		'max_sample': 1,
         },
         {
                 'sampler': {
-                        'min_scale': 0.3,
-                        'max_scale': 1.0,
-                        'min_aspect_ratio': 0.5,
-                        'max_aspect_ratio': 2.0,
-                        },
-                'sample_constraint': {
-                        'min_jaccard_overlap': 0.3,
-                        },
-                'max_trials': 50,
+                        'min_scale': 0.2,
+                        'max_scale': 0.4,
+                },
+                'max_trials': 1,
+                'max_sample': 2,
+        },
+        {
+                'sampler': {
+                        'min_scale': 0.4,
+                        'max_scale': 0.6,
+                },
+                'max_trials': 1,
                 'max_sample': 1,
         },
         {
@@ -247,16 +247,23 @@ multibox_loss_param = {
     'neg_pos_ratio': neg_pos_ratio,
     'neg_overlap': 0.5,
     'code_type': code_type,
+    'min_num_negs': 200
     }
 loss_param = {
     'normalization': normalization_mode,
     }
 
 # parameters for generating priors.
+
 # minimum starting size of face box is min_dim*0.2, these will be placed at 1st mbox_source_layers
 # progressively bigger boxes are used in higher layers until you get to pool6 which uses box size
 # of min_dim*0.95
-min_dim = 300
+#min_dim = 300
+
+# alternatively manually set the starting and end box sizes
+min_box_size = 40
+max_box_size = 700
+
 # conv4_3 ==> 38 x 38
 # fc7-conv ==> 19 x 19
 # conv6_2 ==> 10 x 10
@@ -266,24 +273,42 @@ min_dim = 300
 
 if model_basename == 'VGG_M':
   mbox_source_layers = ['conv4', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+elif model_basename == 'SQUEEZE':
+  mbox_source_layers = ['fire9/concat', 'conv10', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
 else:
   mbox_source_layers = ['conv4_3', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
 
 # in percent %
 min_ratio = 20
 max_ratio = 95
-step = int(math.floor((max_ratio - min_ratio) / (len(mbox_source_layers) - 2)))
+step = int(math.floor((max_box_size - min_box_size) / len(mbox_source_layers)))
 min_sizes = []
 max_sizes = []
-for ratio in xrange(min_ratio, max_ratio + 1, step):
-  min_sizes.append(min_dim * ratio / 100.)
-  max_sizes.append(min_dim * (ratio + step) / 100.)
-min_sizes = [min_dim * 10 / 100.] + min_sizes
-max_sizes = [[]] + max_sizes
+
+#for ratio in xrange(min_ratio, max_ratio + 1, step):
+#  min_sizes.append(min_dim * ratio / 100.)
+#  max_sizes.append(min_dim * (ratio + step) / 100.)
+#min_sizes = [min_dim * 10 / 100.] + min_sizes
+#max_sizes = [[]] + max_sizes
+
+cnt = 0
+for box_size in xrange(min_box_size, max_box_size, step):
+  min_sizes.append(box_size)
+  max_sizes.append(box_size + step)
+  print(min_sizes[cnt])
+  print(max_sizes[cnt])
+  cnt = cnt + 1
+
+#min_sizes = [[]] + min_sizes
+#max_sizes = [[]] + max_sizes
+print(len(min_sizes))
+print(len(mbox_source_layers))
+
 # aspect ratio is used to calculate starting box width and height using width * sqrt(ap) and height / sqrt(ap)
 # each list in the list is the aspect ratios for each layer in mbox_source_layers. There is always a prior with
 # aspect ratio 1 by default at min and max size (from min_sizes and max_sizes).
-aspect_ratios = [[2], [2,3], [2,3], [2,3], [2,3], [2,3]]
+aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
+
 # L2 normalize conv4_3.
 normalizations = [20, -1, -1, -1, -1, -1]
 # variance used to encode/decode prior bboxes.
@@ -307,8 +332,11 @@ batch_size = 32
 accum_batch_size = 32
 
 if model_basename == 'VGG_M':
-  batch_size = 64
-  accum_batch_size = 64
+  batch_size = 128
+  accum_batch_size = 128
+elif models_basename == 'SQUEEZE':
+  batch_size = 128
+  accum_batch_size = 128
   
 iter_size = accum_batch_size / batch_size
 solver_mode = P.Solver.CPU
@@ -335,6 +363,9 @@ elif normalization_mode == P.Loss.FULL:
 
 if model_basename == 'VGG_M':
   freeze_layers = ['conv1', 'conv2', 'conv3']
+elif model_basename == 'SQUEEZE':
+  freeze_layers = ['conv1', 'fire2/squeeze1x1', 'fire2/expand1x1', 'fire2/expand3x3', 'fire3/squeeze1x1', 'fire3/expand1x1', 'fire3/expand3x3', ...
+                   'fire4/squeeze1x1', 'fire4/expand1x1', 'fire4/expand3x3', 'fire5/squeeze1x1', 'fire5/expand1x1', 'fire5/expand3x3']
 else:
   freeze_layers = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2']
 
@@ -352,8 +383,8 @@ solver_param = {
     'gamma': 0.1,
     'momentum': 0.9,
     'iter_size': iter_size,
-    'max_iter': 60000,
-    'snapshot': 40000,
+    'max_iter': 240000,
+    'snapshot': 5000,
     'display': 10,
     'average_loss': 10,
     'type': "SGD",
@@ -363,7 +394,7 @@ solver_param = {
     'snapshot_after_train': True,
     # Test parameters
     'test_iter': [test_iter],
-    'test_interval': 10000,
+    'test_interval': 20000,
     'eval_type': "detection",
     'ap_version': "11point",
     'test_initialization': False,
@@ -417,6 +448,9 @@ if model_basename == 'VGG_M':
 	print("USING VGG_M model")
 	VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
 				dropout=False, freeze_layers=freeze_layers)
+elif model_basename == 'SQUEEZE':
+    print("USING SQUEEZE NET MODEL")
+    SqueezeNetBody(net, from_layer='data', freeze_layers=freeze_layers)
 else:
 	VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
 				dropout=False, freeze_layers=freeze_layers)
@@ -449,6 +483,8 @@ net.data, net.label = CreateAnnotatedDataLayer(test_data, batch_size=test_batch_
 if model_basename == 'VGG_M':
   VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
                 dropout=False, freeze_layers=freeze_layers)
+elif model_basename == 'SQUEEZE':
+    SqueezeNetBody(net, from_layer='data', freeze_layers=freeze_layers)
 else:
   VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
              dropout=False, freeze_layers=freeze_layers)
