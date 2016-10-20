@@ -273,6 +273,8 @@ max_box_size = 700
 
 if model_basename == 'VGG_M':
   mbox_source_layers = ['conv4', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+elif model_basename == 'SQUEEZE':
+  mbox_source_layers = ['fire9/concat', 'conv10', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
 else:
   mbox_source_layers = ['conv4_3', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
 
@@ -332,6 +334,9 @@ accum_batch_size = 32
 if model_basename == 'VGG_M':
   batch_size = 128
   accum_batch_size = 128
+elif models_basename == 'SQUEEZE':
+  batch_size = 128
+  accum_batch_size = 128
   
 iter_size = accum_batch_size / batch_size
 solver_mode = P.Solver.CPU
@@ -358,6 +363,9 @@ elif normalization_mode == P.Loss.FULL:
 
 if model_basename == 'VGG_M':
   freeze_layers = ['conv1', 'conv2', 'conv3']
+elif model_basename == 'SQUEEZE':
+  freeze_layers = ['conv1', 'fire2/squeeze1x1', 'fire2/expand1x1', 'fire2/expand3x3', 'fire3/squeeze1x1', 'fire3/expand1x1', 'fire3/expand3x3', ...
+                   'fire4/squeeze1x1', 'fire4/expand1x1', 'fire4/expand3x3', 'fire5/squeeze1x1', 'fire5/expand1x1', 'fire5/expand3x3']
 else:
   freeze_layers = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2']
 
@@ -440,6 +448,9 @@ if model_basename == 'VGG_M':
 	print("USING VGG_M model")
 	VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
 				dropout=False, freeze_layers=freeze_layers)
+elif model_basename == 'SQUEEZE':
+    print("USING SQUEEZE NET MODEL")
+    SqueezeNetBody(net, from_layer='data', freeze_layers=freeze_layers)
 else:
 	VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
 				dropout=False, freeze_layers=freeze_layers)
@@ -472,6 +483,8 @@ net.data, net.label = CreateAnnotatedDataLayer(test_data, batch_size=test_batch_
 if model_basename == 'VGG_M':
   VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
                 dropout=False, freeze_layers=freeze_layers)
+elif model_basename == 'SQUEEZE':
+    SqueezeNetBody(net, from_layer='data', freeze_layers=freeze_layers)
 else:
   VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
              dropout=False, freeze_layers=freeze_layers)
