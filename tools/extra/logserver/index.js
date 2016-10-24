@@ -66,9 +66,9 @@ var readLogFile = function(logfile_path) {
 
 app.post('/logfile', (req, res, next) => {
   console.time('/logfile');
-  if(req.query.logFilePath && req.query.logFilePath.length > 0) {
-    console.log('setting logfile to ' + req.query.logFilePath); 
-    logfile_path = req.query.logFilePath;
+  if(req.body.logFilePath && req.body.logFilePath.length > 0) {
+    console.log('setting logfile to ' + req.body.logFilePath); 
+    logfile_path = req.body.logFilePath;
   }
   res.json({success: 'ok'});
 });
