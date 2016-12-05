@@ -170,17 +170,25 @@ NONEMPTY_WARN_REPORT := $(BUILD_DIR)/$(WARNS_EXT)
 ##############################
 # Derive include and lib directories
 ##############################
-CUDA_INCLUDE_DIR := $(CUDA_DIR_TARGET)/include
-
-CUDA_LIB_DIR :=
-# add <cuda>/lib64 only if it exists
-ifneq ("$(wildcard $(CUDA_DIR_TARGET)/lib64)","")
-	CUDA_LIB_DIR += $(CUDA_DIR_TARGET)/lib64
-endif
-CUDA_LIB_DIR += $(CUDA_DIR_TARGET)/lib
 
 INCLUDE_DIRS += $(BUILD_INCLUDE_DIR) ./src ./include
+
 ifneq ($(CPU_ONLY), 1)
+
+	CUDA_INCLUDE_DIR := $(CUDA_DIR_TARGET)/include
+
+	ifndef CUDA_LIB_DIR
+
+		CUDA_LIB_DIR :=
+		# add <cuda>/lib64 only if it exists
+		ifneq ("$(wildcard $(CUDA_DIR_TARGET)/lib64)","")
+			CUDA_LIB_DIR += $(CUDA_DIR_TARGET)/lib64
+		endif
+
+		CUDA_LIB_DIR += $(CUDA_DIR_TARGET)/lib
+
+	endif
+
 	INCLUDE_DIRS += $(CUDA_INCLUDE_DIR)
 	LIBRARY_DIRS += $(CUDA_LIB_DIR)
 	LIBRARIES := cudart cublas curand
