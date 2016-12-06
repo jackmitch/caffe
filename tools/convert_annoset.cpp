@@ -61,7 +61,9 @@ DEFINE_bool(encoded, false,
     "When this option is on, the encoded image will be save in datum");
 DEFINE_string(encode_type, "",
     "Optional: What type should we encode the image as ('png','jpg',...).");
-
+DEFINE_bool(generate_stats_only, false,
+    "Optional: If true will output a csv file of image sizes and box sizes");
+	
 int main(int argc, char** argv) {
 #ifdef USE_OPENCV
   ::google::InitGoogleLogging(argv[0]);
@@ -92,9 +94,12 @@ int main(int argc, char** argv) {
   const string label_type = FLAGS_label_type;
   const string label_map_file = FLAGS_label_map_file;
   const bool check_label = FLAGS_check_label;
+  const bool generate_stats_only = FLAGS_generate_stats_only;
+  
   std::map<std::string, int> name_to_label;
 
   std::ifstream infile(argv[2]);
+  std::ofstream statsfile;
   std::vector<std::pair<std::string, boost::variant<int, std::string> > > lines;
   std::string filename;
   int label;
@@ -131,9 +136,15 @@ int main(int argc, char** argv) {
 
   // Create new DB
   scoped_ptr<db::DB> db(db::GetDB(FLAGS_backend));
-  db->Open(argv[3], db::NEW);
-  scoped_ptr<db::Transaction> txn(db->NewTransaction());
-
+  scoped_ptr<db::Transaction> txn;
+  
+  if(!generate_stats_only) {
+    db->Open(argv[3], db::NEW);
+    txn.reset(db->NewTransaction());
+  } else {
+    statsfile.open(argv[3], std::ofstream::out);
+  }
+  
   // Storing to db
   std::string root_folder(argv[1]);
   AnnotatedDatum anno_datum;
@@ -180,6 +191,23 @@ int main(int argc, char** argv) {
             << data.size();
       }
     }
+	
+	if(generate_stats_only) {
+		int height=0, width=0;
+    GetImageSize(filename, &height, &width);
+    // output all annotations
+    for(int i=0; i < anno_datum.annotation_group_size(); i++) {
+      for(int n=0; n < anno_datum.annotation_group(i).annotation_size(); n++) {
+        const caffe::Annotation& anno = anno_datum.annotation_group(i).annotation(n);
+        if(anno.has_box()) {
+          statsfile << fielname << "," << width << "," << height << "," << anno.bbox.xmin()*width 
+          << "," << anno.bbox.xmax()*width << "," << anno.bbox.ymin()*height << "," 
+          << anno.bbox.ymax()*height << std::endl;
+        }
+      }
+    }
+	}
+	else {
     // sequential
     string key_str = caffe::format_int(line_id, 8) + "_" + lines[line_id].first;
 
@@ -194,11 +222,15 @@ int main(int argc, char** argv) {
       txn.reset(db->NewTransaction());
       LOG(INFO) << "Processed " << count << " files.";
     }
+	}
   }
   // write the last batch
   if (count % 1000 != 0) {
     txn->Commit();
     LOG(INFO) << "Processed " << count << " files.";
+  }
+  if(generate_stats_only) {
+    statsfile.close();
   }
 #else
   LOG(FATAL) << "This tool requires OpenCV; compile with USE_OPENCV.";
