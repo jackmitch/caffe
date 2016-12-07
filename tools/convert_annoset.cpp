@@ -63,7 +63,7 @@ DEFINE_string(encode_type, "",
     "Optional: What type should we encode the image as ('png','jpg',...).");
 DEFINE_bool(generate_stats_only, false,
     "Optional: If true will output a csv file of image sizes and box sizes");
-	
+
 int main(int argc, char** argv) {
 #ifdef USE_OPENCV
   ::google::InitGoogleLogging(argv[0]);
@@ -142,6 +142,7 @@ int main(int argc, char** argv) {
     db->Open(argv[3], db::NEW);
     txn.reset(db->NewTransaction());
   } else {
+    LOG(INFO) << "Generating image statistics";
     statsfile.open(argv[3], std::ofstream::out);
   }
   
@@ -192,37 +193,37 @@ int main(int argc, char** argv) {
       }
     }
 	
-	if(generate_stats_only) {
-		int height=0, width=0;
-    GetImageSize(filename, &height, &width);
-    // output all annotations
-    for(int i=0; i < anno_datum.annotation_group_size(); i++) {
-      for(int n=0; n < anno_datum.annotation_group(i).annotation_size(); n++) {
-        const caffe::Annotation& anno = anno_datum.annotation_group(i).annotation(n);
-        if(anno.has_box()) {
-          statsfile << fielname << "," << width << "," << height << "," << anno.bbox.xmin()*width 
-          << "," << anno.bbox.xmax()*width << "," << anno.bbox.ymin()*height << "," 
-          << anno.bbox.ymax()*height << std::endl;
+    if(generate_stats_only) {
+      int height=0, width=0;
+      GetImageSize(filename, &height, &width);
+      // output all annotations
+      for(int i=0; i < anno_datum.annotation_group_size(); i++) {
+        for(int n=0; n < anno_datum.annotation_group(i).annotation_size(); n++) {
+          const caffe::Annotation& anno = anno_datum.annotation_group(i).annotation(n);
+          if(anno.has_bbox()) {
+            statsfile << filename << "," << width << "," << height << "," << anno.bbox().xmin()*width 
+            << "," << anno.bbox().xmax()*width << "," << anno.bbox().ymin()*height << "," 
+            << anno.bbox().ymax()*height << std::endl;
+          }
         }
       }
     }
-	}
-	else {
-    // sequential
-    string key_str = caffe::format_int(line_id, 8) + "_" + lines[line_id].first;
+    else {
+      // sequential
+      string key_str = caffe::format_int(line_id, 8) + "_" + lines[line_id].first;
 
-    // Put in db
-    string out;
-    CHECK(anno_datum.SerializeToString(&out));
-    txn->Put(key_str, out);
+      // Put in db
+      string out;
+      CHECK(anno_datum.SerializeToString(&out));
+      txn->Put(key_str, out);
 
-    if (++count % 1000 == 0) {
-      // Commit db
-      txn->Commit();
-      txn.reset(db->NewTransaction());
-      LOG(INFO) << "Processed " << count << " files.";
+      if (++count % 1000 == 0) {
+        // Commit db
+        txn->Commit();
+        txn.reset(db->NewTransaction());
+        LOG(INFO) << "Processed " << count << " files.";
+      }
     }
-	}
   }
   // write the last batch
   if (count % 1000 != 0) {
