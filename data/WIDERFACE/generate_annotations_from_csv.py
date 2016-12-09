@@ -49,7 +49,7 @@ for row in csvrows:
         last_filename = filename
 
         # add the line to the images file
-        imglist_file.write('img/%s.jpg annos/%s_annotation.xml\n' % (last_filename, last_filename))
+        imglist_file.write('wider_imgs/%s.jpg annos/labels/%s_annotation.xml\n' % (last_filename, last_filename))
 
     box = {}
     box['left'] = float(row[1])
