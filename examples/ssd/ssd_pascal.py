@@ -177,7 +177,7 @@ train_transform_param = {
         'mean_value': [104, 117, 123],
         'resize_param': {
                 'prob': 1,
-                'resize_mode': P.Resize.WARP,
+                'resize_mode': [P.Resize.WARP],
                 'height': resize_height,
                 'width': resize_width,
                 'interp_mode': [
@@ -213,7 +213,7 @@ test_transform_param = {
         'mean_value': [104, 117, 123],
         'resize_param': {
                 'prob': 1,
-                'resize_mode': P.Resize.WARP,
+                'resize_mode': [P.Resize.WARP],
                 'height': resize_height,
                 'width': resize_width,
                 'interp_mode': [P.Resize.LINEAR],

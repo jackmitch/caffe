@@ -16,10 +16,6 @@ namespace caffe {
 // Generate random number given the probablities for each number.
 int roll_weighted_die(const std::vector<float>& probabilities);
 
-void UpdateBBoxByResizePolicy(const ResizeParameter& param,
-                              const int old_width, const int old_height,
-                              NormalizedBBox* bbox);
-
 void InferNewSize(const ResizeParameter& resize_param,
                   const int old_width, const int old_height,
                   int* new_width, int* new_height);
@@ -51,7 +47,11 @@ cv::Mat AspectKeepingResizeBySmall(const cv::Mat& in_img,
 
 void constantNoise(const int n, const vector<uchar>& val, cv::Mat* image);
 
-cv::Mat ApplyResize(const cv::Mat& in_img, const ResizeParameter& param);
+void UpdateBBoxByResizePolicy(const ResizeParameter& param,
+                              const int old_width, const int old_height,
+                              NormalizedBBox* bbox, int resize_mode_used = 0);
+
+cv::Mat ApplyResize(const cv::Mat& in_img, const ResizeParameter& param, int *resize_mode_used=nullptr);
 
 cv::Mat ApplyNoise(const cv::Mat& in_img, const NoiseParameter& param);
 

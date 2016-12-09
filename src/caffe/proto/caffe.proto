@@ -592,14 +592,14 @@ message ResizeParameter {
     FIT_SMALL_SIZE = 2;
     FIT_LARGE_SIZE_AND_PAD = 3;
   }
-  optional Resize_mode resize_mode = 2 [default = WARP];
+  repeated Resize_mode resize_mode = 2;
   optional uint32 height = 3 [default = 0];
   optional uint32 width = 4 [default = 0];
-
+  
   // A parameter used to update bbox in FIT_SMALL_SIZE mode.
   optional uint32 height_scale = 8 [default = 0];
   optional uint32 width_scale = 9 [default = 0];
-
+  
   enum Pad_mode {
     CONSTANT = 1;
     MIRRORED = 2;

@@ -640,7 +640,10 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
 
   cv::Mat cv_resized_image, cv_noised_image, cv_cropped_image;
   if (param_.has_resize_param()) {
-    cv_resized_image = ApplyResize(cv_img, param_.resize_param());
+    int resize_mode_used = 0;
+    cv_resized_image = ApplyResize(cv_img, param_.resize_param(), &resize_mode_used);
+	//UpdateBBoxByResizePolicy(param_.resize_param(), img_width, img_height,
+    //                         crop_bbox, resize_mode_used);
   } else {
     cv_resized_image = cv_img;
   }
