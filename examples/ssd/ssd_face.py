@@ -367,7 +367,7 @@ elif normalization_mode == P.Loss.FULL:
 if model_basename == 'VGG_M':
   freeze_layers = ['conv1', 'conv2', 'conv3']
 elif model_basename == 'SQUEEZE':
-  freeze_layers = ['conv1', 'fire2/squeeze1x1', 'fire2/expand1x1', 'fire2/expand3x3', 'fire3/squeeze1x1', 'fire3/expand1x1', 'fire3/expand3x3', ...
+  freeze_layers = ['conv1', 'fire2/squeeze1x1', 'fire2/expand1x1', 'fire2/expand3x3', 'fire3/squeeze1x1', 'fire3/expand1x1', 'fire3/expand3x3', \
                    'fire4/squeeze1x1', 'fire4/expand1x1', 'fire4/expand3x3', 'fire5/squeeze1x1', 'fire5/expand1x1', 'fire5/expand3x3']
 else:
   freeze_layers = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2']
