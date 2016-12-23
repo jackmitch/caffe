@@ -97,8 +97,11 @@ class DataTransformer {
    *    Stores all transformed AnnotationGroup.
    */
   void TransformAnnotation(
-      const AnnotatedDatum& anno_datum, const bool do_resize,
-      const NormalizedBBox& crop_bbox, const bool do_mirror,
+      const AnnotatedDatum& anno_datum,
+      const NormalizedBBox& crop_bbox, 
+	  const bool do_resize, 
+	  const bool do_project, 
+	  const bool do_mirror,
       RepeatedPtrField<AnnotationGroup>* transformed_anno_group_all);
 
   /**

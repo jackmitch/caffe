@@ -282,8 +282,11 @@ void DataTransformer<Dtype>::Transform(
 
 template<typename Dtype>
 void DataTransformer<Dtype>::TransformAnnotation(
-    const AnnotatedDatum& anno_datum, const bool do_resize,
-    const NormalizedBBox& crop_bbox, const bool do_mirror,
+    const AnnotatedDatum& anno_datum,
+    const NormalizedBBox& crop_bbox, 
+	const bool do_resize, 
+	const bool do_project, 
+	const bool do_mirror,
     RepeatedPtrField<AnnotationGroup>* transformed_anno_group_all) {
   const int img_height = anno_datum.datum().height();
   const int img_width = anno_datum.datum().width();
@@ -311,7 +314,14 @@ void DataTransformer<Dtype>::TransformAnnotation(
           continue;
         }
         NormalizedBBox proj_bbox;
-        if (ProjectBBox(crop_bbox, resize_bbox, &proj_bbox)) {
+        bool ok = false;
+        if (do_project) {
+          ok = ProjectBBox(crop_bbox, resize_bbox, &proj_bbox);
+        }
+        else {
+          ok = LocateBBox(crop_bbox, resize_bbox, &proj_bbox);
+        }
+        if (ok) {
           has_valid_annotation = true;
           Annotation* transformed_anno =
               transformed_anno_group.add_annotation();
@@ -422,7 +432,7 @@ void DataTransformer<Dtype>::CropImage(const AnnotatedDatum& anno_datum,
   const bool do_mirror = false;
   NormalizedBBox crop_bbox;
   ClipBBox(bbox, &crop_bbox);
-  TransformAnnotation(anno_datum, do_resize, crop_bbox, do_mirror,
+  TransformAnnotation(anno_datum, crop_bbox, true, do_mirror,
                       cropped_anno_datum->mutable_annotation_group());
 }
 
