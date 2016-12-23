@@ -319,7 +319,8 @@ void DataTransformer<Dtype>::TransformAnnotation(
           ok = ProjectBBox(crop_bbox, resize_bbox, &proj_bbox);
         }
         else {
-          ok = LocateBBox(crop_bbox, resize_bbox, &proj_bbox);
+          LocateBBox(crop_bbox, resize_bbox, &proj_bbox);
+          ok = true;
         }
         if (ok) {
           has_valid_annotation = true;
