@@ -88,7 +88,7 @@ void DetectionOutputLayer<Dtype>::Forward_gpu(
       }
       // Keep top k results per image.
       std::sort(score_index_pairs.begin(), score_index_pairs.end(),
-                SortScorePairDescend<pair<int, int> >);
+                SortScorePairDescend<float, pair<int, int> >);
       score_index_pairs.resize(keep_top_k_);
       // Store the new indices.
       map<int, vector<int> > new_indices;

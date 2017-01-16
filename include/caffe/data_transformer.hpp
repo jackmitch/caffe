@@ -99,9 +99,9 @@ class DataTransformer {
   void TransformAnnotation(
       const AnnotatedDatum& anno_datum,
       const NormalizedBBox& crop_bbox, 
-	  const bool do_resize, 
-	  const bool do_project, 
-	  const bool do_mirror,
+	    const bool do_resize, 
+	    const bool do_mirror,
+      const caffe::ResizeParameter::Resize_mode resize_mode_used,
       RepeatedPtrField<AnnotationGroup>* transformed_anno_group_all);
 
   /**
@@ -158,7 +158,8 @@ class DataTransformer {
    *    set_cpu_data() is used. See image_data_layer.cpp for an example.
    */
   void Transform(const cv::Mat& cv_img, Blob<Dtype>* transformed_blob,
-                 NormalizedBBox* crop_bbox, bool* do_mirror);
+                 NormalizedBBox* crop_bbox, bool* do_mirror, 
+                 caffe::ResizeParameter::Resize_mode* resize_mode_used);
   void Transform(const cv::Mat& cv_img, Blob<Dtype>* transformed_blob);
 
   /**
@@ -249,7 +250,8 @@ class DataTransformer {
    * transform_param block to the data and return transform information.
    */
   void Transform(const Datum& datum, Blob<Dtype>* transformed_blob,
-                 NormalizedBBox* crop_bbox, bool* do_mirror);
+                 NormalizedBBox* crop_bbox, bool* do_mirror,
+                 caffe::ResizeParameter::Resize_mode *resize_mode);
 
   // Tranformation parameters
   TransformationParameter param_;

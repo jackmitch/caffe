@@ -620,21 +620,21 @@ message ResizeParameter {
     LANCZOS4 = 5;
   }
   //interpolation for for resizing
-  repeated Interp_mode interp_mode = 11;
+  repeated Interp_mode interp_mode = 13;
   
   // this resizes the image such that shortest side of the image is scaled between min and max scale
   // the longest side is scaled to keep current aspect ratio if min_aspect_ratio and max_aspect_ratio 
   // are not defined or the aspect ratio is randomly sampled from the range.
-  optional float min_scale = 12 [default = 0];
-  optional float max_scale = 13 [default = 0];
-  optional float min_aspect_ratio = 14 [default = 0];
-  optional float max_aspect_ratio = 15 [default = 0];
+  optional float min_scale = 14 [default = 0];
+  optional float max_scale = 15 [default = 0];
+  optional float min_aspect_ratio = 16 [default = 0];
+  optional float max_aspect_ratio = 17 [default = 0];
   
   // This resizes the image such that the shortest side of the image is scaled between 
   // min and max_shortest_side (randomly sampled). This cannot be used in conjunction
   // iwth min_scale etc
-  optional uint32 min_shortest_side = 16 [default = 0];
-  optional uint32 max_shortest_side = 17 [default = 0];
+  optional uint32 min_shortest_side = 18 [default = 0];
+  optional uint32 max_shortest_side = 19 [default = 0];
 
 }
 

@@ -49,9 +49,11 @@ void constantNoise(const int n, const vector<uchar>& val, cv::Mat* image);
 
 void UpdateBBoxByResizePolicy(const ResizeParameter& param,
                               const int old_width, const int old_height,
-                              NormalizedBBox* bbox, int resize_mode_used = 0);
+                              NormalizedBBox* bbox, 
+                              caffe::ResizeParameter::Resize_mode resize_mode_used);
 
-cv::Mat ApplyResize(const cv::Mat& in_img, const ResizeParameter& param, int *resize_mode_used=NULL);
+cv::Mat ApplyResize(const cv::Mat& in_img, const ResizeParameter& param, 
+                    caffe::ResizeParameter::Resize_mode *resize_mode_used=NULL);
 
 cv::Mat ApplyNoise(const cv::Mat& in_img, const NoiseParameter& param);
 

@@ -39,10 +39,13 @@ void AnnotatedDataLayer<Dtype>::DataLayerSetUp(
   const TransformationParameter& transform_param =
     this->layer_param_.transform_param();
   if (transform_param.has_resize_param()) {
-    if (transform_param.resize_param().resize_mode() ==
+    for (int i = 0; i < transform_param.resize_param().resize_mode_size(); i++) {
+      if (transform_param.resize_param().resize_mode(i) ==
         ResizeParameter_Resize_mode_FIT_SMALL_SIZE) {
-      CHECK_EQ(batch_size, 1)
-        << "Only support batch size of 1 for FIT_SMALL_SIZE.";
+        CHECK_EQ(transform_param.resize_param().resize_mode_size(), 1)
+          << "FIT_SMALL_SIZE only supported on its own as the input input size changes per image";
+        CHECK_EQ(batch_size, 1) << "Only support batch size of 1 for FIT_SMALL_SIZE.";
+      }
     }
   }
 
@@ -195,7 +198,8 @@ void AnnotatedDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     vector<int> shape =
         this->data_transformer_->InferBlobShape(sampled_datum->datum());
     if (transform_param.has_resize_param()) {
-      if (transform_param.resize_param().resize_mode() ==
+      // alerady checked ResizeParameter_Resize_mode_FIT_SMALL_SIZE is the only resize param
+      if (transform_param.resize_param().resize_mode(0) ==
           ResizeParameter_Resize_mode_FIT_SMALL_SIZE) {
         this->transformed_data_.Reshape(shape);
         batch->data_.Reshape(shape);

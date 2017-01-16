@@ -155,7 +155,8 @@ template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const Datum& datum,
                                        Blob<Dtype>* transformed_blob,
                                        NormalizedBBox* crop_bbox,
-                                       bool* do_mirror) {
+                                       bool* do_mirror,
+                                       caffe::ResizeParameter::Resize_mode* resize_mode) {
   // If datum is encoded, decoded and transform the cv::image.
   if (datum.encoded()) {
 #ifdef USE_OPENCV
@@ -169,7 +170,7 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
       cv_img = DecodeDatumToCVMatNative(datum);
     }
     // Transform the cv::image into blob.
-    return Transform(cv_img, transformed_blob, crop_bbox, do_mirror);
+    return Transform(cv_img, transformed_blob, crop_bbox, do_mirror, resize_mode);
 #else
     LOG(FATAL) << "Encoded datum requires OpenCV; compile with USE_OPENCV.";
 #endif  // USE_OPENCV
@@ -212,7 +213,8 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
                                        Blob<Dtype>* transformed_blob) {
   NormalizedBBox crop_bbox;
   bool do_mirror;
-  Transform(datum, transformed_blob, &crop_bbox, &do_mirror);
+  caffe::ResizeParameter::Resize_mode resize_mode;
+  Transform(datum, transformed_blob, &crop_bbox, &do_mirror, &resize_mode);
 }
 
 template<typename Dtype>
@@ -243,11 +245,13 @@ void DataTransformer<Dtype>::Transform(
   // Transform datum.
   const Datum& datum = anno_datum.datum();
   NormalizedBBox crop_bbox;
-  Transform(datum, transformed_blob, &crop_bbox, do_mirror);
+  caffe::ResizeParameter::Resize_mode resize_mode;
+
+  Transform(datum, transformed_blob, &crop_bbox, do_mirror, &resize_mode);
 
   // Transform annotation.
   const bool do_resize = true;
-  TransformAnnotation(anno_datum, do_resize, crop_bbox, *do_mirror,
+  TransformAnnotation(anno_datum, crop_bbox, do_resize, *do_mirror, resize_mode,
                       transformed_anno_group_all);
 }
 
@@ -284,9 +288,9 @@ template<typename Dtype>
 void DataTransformer<Dtype>::TransformAnnotation(
     const AnnotatedDatum& anno_datum,
     const NormalizedBBox& crop_bbox, 
-	const bool do_resize, 
-	const bool do_project, 
-	const bool do_mirror,
+	  const bool do_resize, 
+	  const bool do_mirror,
+    const caffe::ResizeParameter::Resize_mode resize_mode_used,
     RepeatedPtrField<AnnotationGroup>* transformed_anno_group_all) {
   const int img_height = anno_datum.datum().height();
   const int img_width = anno_datum.datum().width();
@@ -306,22 +310,17 @@ void DataTransformer<Dtype>::TransformAnnotation(
           CHECK_GT(img_height, 0);
           CHECK_GT(img_width, 0);
           UpdateBBoxByResizePolicy(param_.resize_param(), img_width, img_height,
-                                   &resize_bbox);
+                                   &resize_bbox, resize_mode_used);
         }
         if (param_.has_emit_constraint() &&
             !MeetEmitConstraint(crop_bbox, resize_bbox,
                                 param_.emit_constraint())) {
           continue;
         }
+
         NormalizedBBox proj_bbox;
-        bool ok = false;
-        if (do_project) {
-          ok = ProjectBBox(crop_bbox, resize_bbox, &proj_bbox);
-        }
-        else {
-          LocateBBox(crop_bbox, resize_bbox, &proj_bbox);
-          ok = true;
-        }
+        bool ok = ProjectBBox(crop_bbox, resize_bbox, &proj_bbox);
+
         if (ok) {
           has_valid_annotation = true;
           Annotation* transformed_anno =
@@ -433,7 +432,7 @@ void DataTransformer<Dtype>::CropImage(const AnnotatedDatum& anno_datum,
   const bool do_mirror = false;
   NormalizedBBox crop_bbox;
   ClipBBox(bbox, &crop_bbox);
-  TransformAnnotation(anno_datum, crop_bbox, true, do_mirror,
+  TransformAnnotation(anno_datum, crop_bbox, do_resize, do_mirror, caffe::ResizeParameter_Resize_mode_WARP,
                       cropped_anno_datum->mutable_annotation_group());
 }
 
@@ -542,7 +541,7 @@ void DataTransformer<Dtype>::ExpandImage(const AnnotatedDatum& anno_datum,
   // Transform the annotation according to crop_bbox.
   const bool do_resize = false;
   const bool do_mirror = false;
-  TransformAnnotation(anno_datum, do_resize, expand_bbox, do_mirror,
+  TransformAnnotation(anno_datum, expand_bbox, do_resize, do_mirror, caffe::ResizeParameter_Resize_mode_WARP,
                       expanded_anno_datum->mutable_annotation_group());
 }
 
@@ -604,7 +603,8 @@ template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
                                        Blob<Dtype>* transformed_blob,
                                        NormalizedBBox* crop_bbox,
-                                       bool* do_mirror) {
+                                       bool* do_mirror,
+                                       caffe::ResizeParameter::Resize_mode* resize_mode_used) {
   // Check dimensions.
   const int img_channels = cv_img.channels();
   const int channels = transformed_blob->channels();
@@ -651,10 +651,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
 
   cv::Mat cv_resized_image, cv_noised_image, cv_cropped_image;
   if (param_.has_resize_param()) {
-    int resize_mode_used = 0;
-    cv_resized_image = ApplyResize(cv_img, param_.resize_param(), &resize_mode_used);
-	//UpdateBBoxByResizePolicy(param_.resize_param(), img_width, img_height,
-    //                         crop_bbox, resize_mode_used);
+    cv_resized_image = ApplyResize(cv_img, param_.resize_param(), resize_mode_used);
   } else {
     cv_resized_image = cv_img;
   }
@@ -853,7 +850,8 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
                                        Blob<Dtype>* transformed_blob) {
   NormalizedBBox crop_bbox;
   bool do_mirror;
-  Transform(cv_img, transformed_blob, &crop_bbox, &do_mirror);
+  caffe::ResizeParameter::Resize_mode resize_mode;
+  Transform(cv_img, transformed_blob, &crop_bbox, &do_mirror, &resize_mode);
 }
 
 template <typename Dtype>
