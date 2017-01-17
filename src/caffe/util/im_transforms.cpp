@@ -364,6 +364,15 @@ cv::Mat ApplyResize(const cv::Mat& in_img,
   }
   CHECK_EQ(param.has_min_shortest_side(), param.has_max_shortest_side());
 
+  if (param.has_prob()) {
+    // we only apply resizing with the given probability
+    float prob;
+    caffe_rng_uniform(1, 0.f, 1.f, &prob);
+    if (prob > param.prob()) {
+      return in_img;
+    }
+  }
+
   // Reading parameters
   int new_height = param.height();
   int new_width = param.width();
@@ -490,6 +499,15 @@ cv::Mat ApplyResize(const cv::Mat& in_img,
 
 cv::Mat ApplyNoise(const cv::Mat& in_img, const NoiseParameter& param) {
   cv::Mat out_img;
+
+  if (param.has_prob()) {
+    // we only apply noise with the given probability
+    float prob;
+    caffe_rng_uniform(1, 0.f, 1.f, &prob);
+    if (prob > param.prob()) {
+      return in_img;
+    }
+  }
 
   if (param.decolorize()) {
     cv::Mat grayscale_img;

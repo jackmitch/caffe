@@ -649,17 +649,24 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
     crop_w = crop_size;
   }
 
-  cv::Mat cv_resized_image, cv_noised_image, cv_cropped_image;
+  cv::Mat cv_resized_image, cv_noised_image, cv_distort, cv_cropped_image;
   if (param_.has_resize_param()) {
     cv_resized_image = ApplyResize(cv_img, param_.resize_param(), resize_mode_used);
   } else {
     cv_resized_image = cv_img;
   }
-  if (param_.has_noise_param()) {
-    cv_noised_image = ApplyNoise(cv_resized_image, param_.noise_param());
-  } else {
-    cv_noised_image = cv_resized_image;
+  if (param_.has_distort_param() && !param_.has_expand_param()) {
+    cv_distort = ApplyDistort(cv_resized_image, param_.distort_param());
   }
+  else {
+    cv_distort = cv_resized_image;
+  }
+  if (param_.has_noise_param()) {
+    cv_noised_image = ApplyNoise(cv_distort, param_.noise_param());
+  } else {
+    cv_noised_image = cv_distort;
+  }
+
   int img_height = cv_noised_image.rows;
   int img_width = cv_noised_image.cols;
   CHECK_GE(img_height, crop_h);
