@@ -58,16 +58,16 @@ void set_random_seed(unsigned int seed) { Caffe::set_random_seed(seed); }
 // later if the input files are disturbed before they are actually used, but
 // this saves frustration in most cases).
 static void CheckFile(const string& filename) {
-    std::ifstream f(filename.c_str());
-    if (!f.good()) {
-      f.close();
-      throw std::runtime_error("Could not open file " + filename);
-    }
+  std::ifstream f(filename.c_str());
+  if (!f.good()) {
     f.close();
+    throw std::runtime_error("Could not open file " + filename);
+  }
+  f.close();
 }
 
 void CheckContiguousArray(PyArrayObject* arr, string name,
-    int channels, int height, int width) {
+  int channels, int height, int width) {
   if (!(PyArray_FLAGS(arr) & NPY_ARRAY_C_CONTIGUOUS)) {
     throw std::runtime_error(name + " must be C contiguous");
   }
@@ -90,8 +90,8 @@ void CheckContiguousArray(PyArrayObject* arr, string name,
 
 // Net constructor
 shared_ptr<Net<Dtype> > Net_Init(string network_file, int phase,
-    const int level, const bp::object& stages,
-    const bp::object& weights) {
+  const int level, const bp::object& stages,
+  const bp::object& weights) {
   CheckFile(network_file);
 
   // Convert stages from list to vector
@@ -104,7 +104,7 @@ shared_ptr<Net<Dtype> > Net_Init(string network_file, int phase,
 
   // Initialize net
   shared_ptr<Net<Dtype> > net(new Net<Dtype>(network_file,
-        static_cast<Phase>(phase), level, &stages_vector));
+    static_cast<Phase>(phase), level, &stages_vector));
 
   // Load weights
   if (!weights.is_none()) {
@@ -118,7 +118,7 @@ shared_ptr<Net<Dtype> > Net_Init(string network_file, int phase,
 
 // Legacy Net construct-and-load convenience constructor
 shared_ptr<Net<Dtype> > Net_Init_Load(
-    string param_file, string pretrained_param_file, int phase) {
+  string param_file, string pretrained_param_file, int phase) {
   LOG(WARNING) << "DEPRECATION WARNING - deprecated use of Python interface";
   LOG(WARNING) << "Use this instead (with the named \"weights\""
     << " parameter):";
@@ -128,7 +128,7 @@ shared_ptr<Net<Dtype> > Net_Init_Load(
   CheckFile(pretrained_param_file);
 
   shared_ptr<Net<Dtype> > net(new Net<Dtype>(param_file,
-      static_cast<Phase>(phase)));
+    static_cast<Phase>(phase)));
   net->CopyTrainedLayersFrom(pretrained_param_file);
   return net;
 }
@@ -148,35 +148,35 @@ void Net_LoadHDF5(Net<Dtype>* net, string filename) {
 }
 
 void Net_SetInputArrays(Net<Dtype>* net, bp::object data_obj,
-    bp::object labels_obj) {
+  bp::object labels_obj) {
   // check that this network has an input MemoryDataLayer
   shared_ptr<MemoryDataLayer<Dtype> > md_layer =
-    boost::dynamic_pointer_cast<MemoryDataLayer<Dtype> >(net->layers()[0]);
+    boost::dynamic_pointer_cast<MemoryDataLayer<Dtype>>(net->layers()[0]);
   if (!md_layer) {
     throw std::runtime_error("set_input_arrays may only be called if the"
-        " first layer is a MemoryDataLayer");
+      " first layer is a MemoryDataLayer");
   }
 
   // check that we were passed appropriately-sized contiguous memory
   PyArrayObject* data_arr =
-      reinterpret_cast<PyArrayObject*>(data_obj.ptr());
+    reinterpret_cast<PyArrayObject*>(data_obj.ptr());
   PyArrayObject* labels_arr =
-      reinterpret_cast<PyArrayObject*>(labels_obj.ptr());
+    reinterpret_cast<PyArrayObject*>(labels_obj.ptr());
   CheckContiguousArray(data_arr, "data array", md_layer->channels(),
-      md_layer->height(), md_layer->width());
+    md_layer->height(), md_layer->width());
   CheckContiguousArray(labels_arr, "labels array", 1, 1, 1);
   if (PyArray_DIMS(data_arr)[0] != PyArray_DIMS(labels_arr)[0]) {
     throw std::runtime_error("data and labels must have the same first"
-        " dimension");
+      " dimension");
   }
   if (PyArray_DIMS(data_arr)[0] % md_layer->batch_size() != 0) {
     throw std::runtime_error("first dimensions of input arrays must be a"
-        " multiple of batch size");
+      " multiple of batch size");
   }
 
   md_layer->Reset(static_cast<Dtype*>(PyArray_DATA(data_arr)),
-      static_cast<Dtype*>(PyArray_DATA(labels_arr)),
-      PyArray_DIMS(data_arr)[0]);
+    static_cast<Dtype*>(PyArray_DATA(labels_arr)),
+    PyArray_DIMS(data_arr)[0]);
 }
 
 Solver<Dtype>* GetSolverFromFile(const string& filename) {
@@ -251,6 +251,91 @@ bp::object BlobVec_add_blob(bp::tuple args, bp::dict kwargs) {
   self->push_back(shared_ptr<Blob<Dtype> >(new Blob<Dtype>(shape)));
   // We need to explicitly return None to use bp::raw_function.
   return bp::object();
+}
+
+vector<shared_ptr<Blob<Dtype> > > CopyBlobs_(Layer<Dtype>* layer) {
+  const vector<shared_ptr<Blob<Dtype> > >& blobs = layer->blobs();
+  vector<shared_ptr<Blob<Dtype> > > copy_blobs;
+  for (size_t n = 0; n < blobs.size(); n++) {
+    copy_blobs.push_back(shared_ptr<Blob<Dtype> >(new Blob<Dtype>(blobs[n]->shape())));
+    copy_blobs[copy_blobs.size() - 1]->CopyFrom(*blobs[n]);
+  }
+  return copy_blobs;
+}
+
+void CopyBlobsToLayer_(Layer<Dtype>* layer, vector<shared_ptr<Blob<Dtype> > >& blobs) {
+  vector<shared_ptr<Blob<Dtype> > >& blobs0 = layer->blobs();
+  CHECK_EQ(blobs0.size(), blobs.size());
+  for (size_t n = 0; n < blobs.size(); n++) {
+    blobs0[n]->CopyFrom(*blobs[n]);
+  }
+}
+
+bp::object Layer_AlterParams(bp::tuple args, bp::dict kwargs) {
+
+  typedef vector<shared_ptr<Blob<Dtype> > > BlobVec;
+
+  Layer<Dtype>* layer = bp::extract<Layer<Dtype>*>(args[0]);
+  Net<Dtype>* net = bp::extract<Net<Dtype>*>(args[1]);
+  
+  bool resetup = false;
+
+  if (kwargs.has_key("num_filters") && layer->layer_param().type() == "Convolution") {
+    int num_filters = bp::extract<int>(kwargs.get("num_filters"));
+
+    BlobVec* new_params = bp::extract<BlobVec*>(args[2]);
+
+    CopyBlobsToLayer_(layer, *new_params);
+
+    LayerParameter& params = const_cast<LayerParameter&>(layer->layer_param());
+    (params.mutable_convolution_param())->set_num_output(num_filters);
+
+    resetup = true;
+  }
+  else if (kwargs.has_key("num_channels") && 
+    (layer->layer_param().type() == "Convolution" || layer->layer_param().type() == "InnerProduct")) {
+    BlobVec* new_params = bp::extract<BlobVec*>(args[2]);
+    CopyBlobsToLayer_(layer, *new_params);
+    resetup = true;
+  }
+  else {
+    resetup = true;
+  }
+
+  if (resetup) {
+    const LayerParameter& params = layer->layer_param();
+
+    const vector<vector<Blob<Dtype>*> >& bv = net->bottom_vecs();
+    const vector<vector<Blob<Dtype>*> >& tv = net->top_vecs();
+
+    // find the layer
+    int bi = -1;
+    const vector<shared_ptr<Layer<Dtype> > >& layers = net->layers();
+    for (size_t i = 0; i < layers.size(); i++) {
+      if (layers[i]->layer_param().name() == params.name()) {
+        bi = i;
+        break;
+      }
+    }
+
+    if (bi >= 0) {
+      layer->LayerSetUp(bv[bi], tv[bi]);
+      layer->Reshape(bv[bi], tv[bi]);
+    }
+  }
+
+  return bp::object();
+}
+
+bp::object Layer_Params(bp::tuple args, bp::dict kwargs) {
+  if (bp::len(kwargs) > 0) {
+    throw std::runtime_error("Layer.params takes no kwargs");
+  }
+  Layer<Dtype>* self = bp::extract<Layer<Dtype>*>(args[0]);
+  const LayerParameter& params = self->layer_param();
+  std::ostringstream stream;
+  params.SerializeToOstream(&stream);
+  return bp::object(stream.str());
 }
 
 template<typename Dtype>
@@ -360,6 +445,8 @@ BOOST_PYTHON_MODULE(_caffe) {
           bp::return_internal_reference<>()))
     .def("setup", &Layer<Dtype>::LayerSetUp)
     .def("reshape", &Layer<Dtype>::Reshape)
+    .def("alter_params", bp::raw_function(&Layer_AlterParams))
+    .add_property("params", bp::raw_function(&Layer_Params))
     .add_property("type", bp::make_function(&Layer<Dtype>::type));
   BP_REGISTER_SHARED_PTR_TO_PYTHON(Layer<Dtype>);
 
