@@ -62,13 +62,16 @@ def TestAccuracy(solver):
     return accurancy
 
 
-def FineTune(solver, niter):
+def FineTune(solver, tag):
     # fine tune the net
     blobs = ('loss', 'acc')
     loss, acc = ({np.zeros(niter)}
                  for _ in blobs)
 
-    for it in range(niter):
+    delta = 100
+    prev_test_accuracy = 0
+
+    while delta > 0.005:
         s.step(1)  # run a single SGD step in Caffe
 
         loss[it], acc[it] = (s.net.blobs[b].data.copy() for b in blobs)
@@ -78,13 +81,15 @@ def FineTune(solver, niter):
             print('%3d) %s' % (it, loss_disp))
               
         if it % solver.test_interval == 0 or it + 1 == niter:
-            TestAccuracy(solver)
+            test_accuracy = TestAccuracy(solver)
+            delta = test_accuracy - prev_test_accuracy
+            prev_test_accuracy = test_accuracy
 
     # Save the learned weights from both nets.
-    savename = os.path.join(solver.snapshot_prefix, '%s/weights.%s.caffemodel')
+    savename = os.path.join(solver.snapshot_prefix, 'weights_%s.caffemodel'%(tag,))
     solver.net.save(savename)
 
-    return loss, acc, weights
+    return loss, acc
 
 
 def FindMinChannelWeights(layer):
@@ -235,13 +240,12 @@ def PruneChannels(solver, weights):
             print('Removing channel %d from layer %s with score %f' % (bc, solver.net._layer_names[bi], min_sum))
 
             RemoveFilterFromLayer(solver.net, solver.net._layer_names[bi], bc)
-    
-        pre_acc = TestAccuracy()
-        loss, post_acc, weights = FineTune() #(0,0,None)
 
         new_size = CountNumParams(solver.net)
-
         comp_ratio = float(new_size) / start_size
+    
+        pre_acc = TestAccuracy()
+        loss, post_acc = FineTune(solver, str(comp_ratio))
 
         f.write('%.3f,%.0f,%.3f,%.3f\n'%(comp_ratio, new_size, pre_acc, post_acc)) 
         print('compression ratio: %.3f (new size: %.0f) pre-accuracy: %.3f post-accuracy: %.3f\n'%(comp_ratio, new_size, pre_acc, post_acc))
