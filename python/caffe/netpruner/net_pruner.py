@@ -107,8 +107,6 @@ def FineTuneUsingCmdLine(solver, tag):
     solver.net.save(weights_filename)
     cmd = './build/caffe train -solver %s -weights %s -gpu all' % (args.solver_file, weights_filename)
     output = subprocess.check_output(cmd, shell=True)
-    proto_savename = os.path.join(solver.snapshot_prefix, 'train_val_%s.prototxt'%(tag,))
-    sovler.net.save_prototxt(proto_savename)
 
     f = open(solver_file, 'r')
     data = f.read()
@@ -118,8 +116,12 @@ def FineTuneUsingCmdLine(solver, tag):
     # copy the new weights back into the net
     solver.net.copy_from(os.path.join(snapshot_prefix, '_iter_%s.caffemodel'%max_itr))
 
+    sovler.net.save_prototxt(os.path.join(snapshot_prefix, 'train_val_%s.prototxt'%(tag,)))
+    solver.net.save(os.path.join(snapshot_prefix, 'weights_%s.prototxt'%(tag,)))
+
     loss, acc = TestAccuracy(solver)
     return loss, acc
+
 
 def FindMinChannelWeights(layer):
     min = 9e9
@@ -276,7 +278,7 @@ def PruneChannels(solver, weights):
             print('Removing channel %d from layer %s with score %f Compression Ratio Now %f' % (bc, solver.net._layer_names[bi], min_sum, comp_ratio))
     
         # fine tune the net
-        pre_acc = TestAccuracy()
+        pre_acc = TestAccuracy(solver)
         loss, post_acc = FineTuneUsingCmdLine(solver, str(comp_ratio)) # FineTune(solver, str(comp_ratio))
 
         f.write('%.3f,%.0f,%.3f,%.3f\n'%(comp_ratio, new_size, pre_acc, post_acc)) 
