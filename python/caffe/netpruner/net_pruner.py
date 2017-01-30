@@ -267,17 +267,17 @@ def PruneChannels(solver, weights):
                         min_sum = sum
                         bi = i
                         bc = c
-        
-            print('Removing channel %d from layer %s with score %f' % (bc, solver.net._layer_names[bi], min_sum))
 
             RemoveFilterFromLayer(solver.net, solver.net._layer_names[bi], bc)
 
             new_size = CountNumParams(solver.net)
             comp_ratio = float(new_size) / start_size
+
+            print('Removing channel %d from layer %s with score %f Compression Ratio Now %f' % (bc, solver.net._layer_names[bi], min_sum, comp_ratio))
     
         # fine tune the net
         pre_acc = TestAccuracy()
-        loss, post_acc = FineTuneUsingCmdLine # FineTune(solver, str(comp_ratio))
+        loss, post_acc = FineTuneUsingCmdLine(solver, str(comp_ratio)) # FineTune(solver, str(comp_ratio))
 
         f.write('%.3f,%.0f,%.3f,%.3f\n'%(comp_ratio, new_size, pre_acc, post_acc)) 
         f.flush()
