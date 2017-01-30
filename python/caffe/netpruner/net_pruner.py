@@ -106,7 +106,14 @@ def FineTuneUsingCmdLine(solver, tag):
     weights_filename = os.path.join(solver.snapshot_prefix, 'weights_%s.caffemodel'%(tag,))
     solver.net.save(weights_filename)
     cmd = './build/caffe train -solver %s -weights %s -gpu all' % (args.solver_file, weights_filename)
-    output = subprocess.check_output(cmd, shell=True)
+
+    filename = 'test.log'
+    with io.open(filename, 'wb') as writer, io.open(filename, 'rb', 1) as reader:
+        process = subprocess.Popen(cmd, stdout=writer)
+        while process.poll() is None:
+            sys.stdout.write(reader.read())
+            time.sleep(0.5)
+        sys.stdout.write(reader.read())
 
     # copy the new weights back into the net
     solver.net.copy_from(os.path.join(args.snapshot_prefix, '_iter_%s.caffemodel'%args.max_itr))
@@ -308,19 +315,20 @@ if __name__ == "__main__":
         '--cpu',
         dest="cpu",
         help="run on cpu or gpu",
+        type=int,
         default = True)
 
     args = parser.parse_args()
 
     # parse extras args from the solver file
-    f = open(solver_file, 'r')
+    f = open(args.solver_file, 'r')
     data = f.read()
     args.snapshot_prefix = re.search('snapshot_prefix:(.*)\n', data).group(1)
     args.max_itr = re.search('max_iter: (.*)\n', data).group(1)
     args.test_iters = re.search('max_iter: (.*)\n', data).group(1)
-    print('Snapshot_prefix: %s\n'%args.snapshot_prefix)
-    print('Max Itr: %s\n'%args.max_itr)
-    print('Test iters: %s\n'%args.test_iters)
+    print('Snapshot_prefix: %s'%args.snapshot_prefix)
+    print('Max Itr: %s'%args.max_itr)
+    print('Test iters: %s'%args.test_iters)
 
     if args.cpu:
         caffe.set_mode_cpu()
