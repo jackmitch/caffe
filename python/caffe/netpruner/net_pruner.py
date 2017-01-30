@@ -10,10 +10,13 @@ import numpy
 import scipy
 import matplotlib.pyplot as plt
 import argparse
+import subprocess
 
 #sys.path.insert(0, 'C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\visp\\caffe\\build\\x64\\Release\\pycaffe')
 import caffe
 from caffe.proto import caffe_pb2
+
+args = None
 
 def PlotWeightDistribution(name, params):
     print('Display weight distribution for %s' % name)
@@ -51,15 +54,18 @@ def ClusterLayer(name, params):
 def TestAccuracy(solver):
     # calculate the accuracy on the validation set
     accuracy = 0
+    loss = 0
     batch_size = solver.test_nets[0].blobs['data'].num
     test_iters = int(len(Xt) / batch_size)
     for i in range(test_iters):
         solver.test_nets[0].forward()
         accuracy += solver.test_nets[0].blobs['accuracy'].data
+        loss += solver.test_nets[0].blobs['loss'].data
     accuracy /= test_iters
+    loss /= test_iters
 
     print("Test Accuracy: {:.3f}".format(accuracy))
-    return accurancy
+    return loss, accurancy
 
 
 def FineTune(solver, tag):
@@ -71,7 +77,7 @@ def FineTune(solver, tag):
     delta = 100
     prev_test_accuracy = 0
 
-    while delta > 0.005:
+    while abs(delta) > 0.005:
         s.step(1)  # run a single SGD step in Caffe
 
         loss[it], acc[it] = (s.net.blobs[b].data.copy() for b in blobs)
@@ -81,16 +87,33 @@ def FineTune(solver, tag):
             print('%3d) %s' % (it, loss_disp))
               
         if it % solver.test_interval == 0 or it + 1 == niter:
-            test_accuracy = TestAccuracy(solver)
+            test_loss, test_accuracy = TestAccuracy(solver)
             delta = test_accuracy - prev_test_accuracy
             prev_test_accuracy = test_accuracy
 
     # Save the learned weights from both nets.
     savename = os.path.join(solver.snapshot_prefix, 'weights_%s.caffemodel'%(tag,))
     solver.net.save(savename)
+    proto_savename = os.path.join(solver.snapshot_prefix, 'train_val_%s.prototxt'%(tag,))
+    sovler.net.save_prototxt(proto_savename)
 
+    return test_loss, test_accuracy
+
+
+def FineTuneUsingCmdLine(solver, tag):
+    # fine tune using the command line
+    weights_filename = os.path.join(solver.snapshot_prefix, 'weights_%s.caffemodel'%(tag,))
+    solver.net.save(weights_filename)
+    cmd = './build/caffe train -solver %s -weights %s -gpu all' % (args.solver_file, weights_filename)
+    output = subprocess.check_output(cmd, shell=True)
+    proto_savename = os.path.join(solver.snapshot_prefix, 'train_val_%s.prototxt'%(tag,))
+    sovler.net.save_prototxt(proto_savename)
+
+    # copy the new weights back into the net
+    solver.net.copy_from(weights_filename)
+
+    loss, acc = TestAccuracy(solver)
     return loss, acc
-
 
 def FindMinChannelWeights(layer):
     min = 9e9
@@ -208,6 +231,7 @@ def PruneChannels(solver, weights):
     solver.net.copy_from(weights)
 
     start_size = CountNumParams(solver.net)
+    comp_ratio = 1.0
 
     f = open('channel_pruning.txt', 'w')
     f.write('compression_ratio,num_params,pre-fine-tune-accuracy,post-fine-tune-accuracy\n')
@@ -220,9 +244,10 @@ def PruneChannels(solver, weights):
 
         layer_to_prune = []
         chan_to_prune = []
-        batch_size = 5
+        start_comp_ratio = comp_ratio
 
-        for j in xrange(0, batch_size):
+        # reduce the net by 5% 
+        while start_comp_ratio - comp_ratio < 0.05:
             # find the best channel to prune, for now the smallest abs weights
             min_sum = 9.9e9
             bi = -1
@@ -241,13 +266,16 @@ def PruneChannels(solver, weights):
 
             RemoveFilterFromLayer(solver.net, solver.net._layer_names[bi], bc)
 
-        new_size = CountNumParams(solver.net)
-        comp_ratio = float(new_size) / start_size
+            new_size = CountNumParams(solver.net)
+            comp_ratio = float(new_size) / start_size
     
+        # fine tune the net
         pre_acc = TestAccuracy()
-        loss, post_acc = FineTune(solver, str(comp_ratio))
+        loss, post_acc = FineTuneUsingCmdLine # FineTune(solver, str(comp_ratio))
 
         f.write('%.3f,%.0f,%.3f,%.3f\n'%(comp_ratio, new_size, pre_acc, post_acc)) 
+        f.flush()
+        os.fsync()
         print('compression ratio: %.3f (new size: %.0f) pre-accuracy: %.3f post-accuracy: %.3f\n'%(comp_ratio, new_size, pre_acc, post_acc))
 
     f.close()

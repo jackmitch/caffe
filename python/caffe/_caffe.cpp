@@ -133,6 +133,12 @@ shared_ptr<Net<Dtype> > Net_Init_Load(
   return net;
 }
 
+void Net_SaveToTextFile(const Net<Dtype>& net, string filename) {
+  NetParameter net_param;
+  net.ToProto(&net_param, false);
+  WriteProtoToTextFile(net_param, filename.c_str());
+}
+
 void Net_Save(const Net<Dtype>& net, string filename) {
   NetParameter net_param;
   net.ToProto(&net_param, false);
@@ -415,6 +421,7 @@ BOOST_PYTHON_MODULE(_caffe) {
     .def("_set_input_arrays", &Net_SetInputArrays,
         bp::with_custodian_and_ward<1, 2, bp::with_custodian_and_ward<1, 3> >())
     .def("save", &Net_Save)
+    .def("save_prototxt", &Net_SaveToTextFile)
     .def("save_hdf5", &Net_SaveHDF5)
     .def("load_hdf5", &Net_LoadHDF5);
   BP_REGISTER_SHARED_PTR_TO_PYTHON(Net<Dtype>);
