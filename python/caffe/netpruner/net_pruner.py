@@ -11,6 +11,7 @@ import scipy
 import matplotlib.pyplot as plt
 import argparse
 import subprocess
+import re
 
 #sys.path.insert(0, 'C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\visp\\caffe\\build\\x64\\Release\\pycaffe')
 import caffe
@@ -109,8 +110,13 @@ def FineTuneUsingCmdLine(solver, tag):
     proto_savename = os.path.join(solver.snapshot_prefix, 'train_val_%s.prototxt'%(tag,))
     sovler.net.save_prototxt(proto_savename)
 
+    f = open(solver_file, 'r')
+    data = f.read()
+    snapshot_prefix = re.search('snapshot_prefix:(.*)\n', data).group(1)
+    max_itr = re.search('max_iter: (.*)\n', data).group(1)
+
     # copy the new weights back into the net
-    solver.net.copy_from(weights_filename)
+    solver.net.copy_from(os.path.join(snapshot_prefix, '_iter_%s.caffemodel'%max_itr))
 
     loss, acc = TestAccuracy(solver)
     return loss, acc
