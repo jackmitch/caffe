@@ -57,7 +57,7 @@ def TestAccuracy(solver):
     accuracy = 0
     loss = 0
     batch_size = solver.test_nets[0].blobs['data'].num
-    test_iters = int(len(Xt) / batch_size)
+    test_iters = int(args.test_iters)
     for i in range(test_iters):
         solver.test_nets[0].forward()
         accuracy += solver.test_nets[0].blobs['accuracy'].data
@@ -108,16 +108,11 @@ def FineTuneUsingCmdLine(solver, tag):
     cmd = './build/caffe train -solver %s -weights %s -gpu all' % (args.solver_file, weights_filename)
     output = subprocess.check_output(cmd, shell=True)
 
-    f = open(solver_file, 'r')
-    data = f.read()
-    snapshot_prefix = re.search('snapshot_prefix:(.*)\n', data).group(1)
-    max_itr = re.search('max_iter: (.*)\n', data).group(1)
-
     # copy the new weights back into the net
-    solver.net.copy_from(os.path.join(snapshot_prefix, '_iter_%s.caffemodel'%max_itr))
+    solver.net.copy_from(os.path.join(args.snapshot_prefix, '_iter_%s.caffemodel'%args.max_itr))
 
-    sovler.net.save_prototxt(os.path.join(snapshot_prefix, 'train_val_%s.prototxt'%(tag,)))
-    solver.net.save(os.path.join(snapshot_prefix, 'weights_%s.prototxt'%(tag,)))
+    sovler.net.save_prototxt(os.path.join(args.snapshot_prefix, 'train_val_%s.prototxt'%(tag,)))
+    solver.net.save(os.path.join(args.snapshot_prefix, 'weights_%s.prototxt'%(tag,)))
 
     loss, acc = TestAccuracy(solver)
     return loss, acc
@@ -316,6 +311,16 @@ if __name__ == "__main__":
         default = True)
 
     args = parser.parse_args()
+
+    # parse extras args from the solver file
+    f = open(solver_file, 'r')
+    data = f.read()
+    args.snapshot_prefix = re.search('snapshot_prefix:(.*)\n', data).group(1)
+    args.max_itr = re.search('max_iter: (.*)\n', data).group(1)
+    args.test_iters = re.search('max_iter: (.*)\n', data).group(1)
+    print('Snapshot_prefix: %s\n'%args.snapshot_prefix)
+    print('Max Itr: %s\n'%args.max_itr)
+    print('Test iters: %s\n'%args.test_iters)
 
     if args.cpu:
         caffe.set_mode_cpu()
