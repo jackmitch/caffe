@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import argparse
 import subprocess
 import re
+import io
+import time
 
 #sys.path.insert(0, 'C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\visp\\caffe\\build\\x64\\Release\\pycaffe')
 import caffe
@@ -66,7 +68,8 @@ def TestAccuracy(solver):
     loss /= test_iters
 
     print("Test Accuracy: {:.3f}".format(accuracy))
-    return loss, accurancy
+    print("Test Loss: {:.3f}".format(loss))
+    return loss, accuracy
 
 
 def FineTune(solver, tag):
@@ -96,30 +99,49 @@ def FineTune(solver, tag):
     savename = os.path.join(solver.snapshot_prefix, 'weights_%s.caffemodel'%(tag,))
     solver.net.save(savename)
     proto_savename = os.path.join(solver.snapshot_prefix, 'train_val_%s.prototxt'%(tag,))
-    sovler.net.save_prototxt(proto_savename)
+    sovler.net.save_params_prototxt(proto_savename)
 
     return test_loss, test_accuracy
 
 
 def FineTuneUsingCmdLine(solver, tag):
     # fine tune using the command line
-    weights_filename = os.path.join(solver.snapshot_prefix, 'weights_%s.caffemodel'%(tag,))
+    weights_filename = '%s_%s'%(args.snapshot_prefix, 'weights_%s.caffemodel'%(tag,))
+    print(weights_filename)
     solver.net.save(weights_filename)
-    cmd = './build/caffe train -solver %s -weights %s -gpu all' % (args.solver_file, weights_filename)
 
+    proto_savename = '%s_%s'%(args.snapshot_prefix, 'train_val_%s.prototxt'%(tag,))
+    solver.net.save_params_prototxt(proto_savename)
+
+    solver_filename = '%s_%s'%(args.snapshot_prefix, 'solver_%s.prototxt'%(tag,))
+    shutil.copyfile(args.solver_file, solver_filename)
+    f = open(args.solver_file, 'r')
+    data = f.read()
+    f.close()
+    new_data = re.sub('net:(.*)\n', 'net: \"%s\"\n'%proto_savename, data)
+    new_data = re.sub('test_iter:(.*)\n', '\n', new_data)
+    new_data = re.sub('test_interval:(.*)\n', '\n', new_data)
+    f = open(solver_filename, 'w')
+    f.write(new_data)
+    f.close()
+
+    cmd = './build/tools/caffe train -solver %s -weights %s -gpu 2,3' % (solver_filename, weights_filename)
+    print(cmd)
+    print(os.getcwd())
+    sys.stdout.flush()
     filename = 'test.log'
     with io.open(filename, 'wb') as writer, io.open(filename, 'rb', 1) as reader:
-        process = subprocess.Popen(cmd, stdout=writer)
+        process = subprocess.Popen(cmd, stdout=writer, shell=True)
         while process.poll() is None:
             sys.stdout.write(reader.read())
             time.sleep(0.5)
         sys.stdout.write(reader.read())
 
     # copy the new weights back into the net
-    solver.net.copy_from(os.path.join(args.snapshot_prefix, '_iter_%s.caffemodel'%args.max_itr))
+    solver.net.copy_from('%s_%s'%(args.snapshot_prefix, 'iter_%s.caffemodel'%args.max_itr))
+    solver.test_nets[0].copy_from('%s_%s'%(args.snapshot_prefix, 'iter_%s.caffemodel'%args.max_itr))
 
-    sovler.net.save_prototxt(os.path.join(args.snapshot_prefix, 'train_val_%s.prototxt'%(tag,)))
-    solver.net.save(os.path.join(args.snapshot_prefix, 'weights_%s.prototxt'%(tag,)))
+    solver.net.save('%s_%s'%(args.snapshot_prefix, 'weights_%s.prototxt'%(tag,)))
 
     loss, acc = TestAccuracy(solver)
     return loss, acc
@@ -239,13 +261,14 @@ def CountNumParams(net):
 def PruneChannels(solver, weights):
 
     solver.net.copy_from(weights)
+    solver.test_nets[0].copy_from(weights)
 
     start_size = CountNumParams(solver.net)
     comp_ratio = 1.0
 
-    f = open('channel_pruning.txt', 'w')
-    f.write('compression_ratio,num_params,pre-fine-tune-accuracy,post-fine-tune-accuracy\n')
-    f.write('0,%.0f,0,0\n'%start_size)
+    f = open('%s/%s'(args.snapshot_prefix, 'channel_pruning.txt'), 'w')
+    f.write('compression_ratio,num_params,pre-fine-tune-accuracy,post-fine-tune-accuracy,pre-fine-tune-loss,post-fine-tune-loss\n')
+    f.write('0,%.0f,0,0,0,0\n'%start_size)
     print('Starting param size %.0f\n'%start_size)
 
     # for all convolutional layers look for the channels that are closest
@@ -273,6 +296,7 @@ def PruneChannels(solver, weights):
                         bc = c
 
             RemoveFilterFromLayer(solver.net, solver.net._layer_names[bi], bc)
+            RemoveFilterFromLayer(solver.test_nets[0], solver.net._layer_names[bi], bc)
 
             new_size = CountNumParams(solver.net)
             comp_ratio = float(new_size) / start_size
@@ -280,12 +304,13 @@ def PruneChannels(solver, weights):
             print('Removing channel %d from layer %s with score %f Compression Ratio Now %f' % (bc, solver.net._layer_names[bi], min_sum, comp_ratio))
     
         # fine tune the net
-        pre_acc = TestAccuracy(solver)
-        loss, post_acc = FineTuneUsingCmdLine(solver, str(comp_ratio)) # FineTune(solver, str(comp_ratio))
+        pre_loss, pre_acc = TestAccuracy(solver)
+        post_loss, post_acc = FineTuneUsingCmdLine(solver, '%.3f'%(comp_ratio,)) # FineTune(solver, str(comp_ratio))
 
-        f.write('%.3f,%.0f,%.3f,%.3f\n'%(comp_ratio, new_size, pre_acc, post_acc)) 
+        ostr = '%.3f,%.0f,%.3f,%.3f,%.3f,%.3f\n'%(comp_ratio, new_size, pre_acc, post_acc, pre_loss, post_loss)
+        f.write('%s\n'%ostr) 
         f.flush()
-        os.fsync()
+        os.fsync(f.fileno())
         print('compression ratio: %.3f (new size: %.0f) pre-accuracy: %.3f post-accuracy: %.3f\n'%(comp_ratio, new_size, pre_acc, post_acc))
 
     f.close()
@@ -323,12 +348,17 @@ if __name__ == "__main__":
     # parse extras args from the solver file
     f = open(args.solver_file, 'r')
     data = f.read()
-    args.snapshot_prefix = re.search('snapshot_prefix:(.*)\n', data).group(1)
+    f.close()
+    args.snapshot_prefix = re.search('snapshot_prefix:(.*)\n', data).group(1).strip(' \"')
     args.max_itr = re.search('max_iter: (.*)\n', data).group(1)
-    args.test_iters = re.search('max_iter: (.*)\n', data).group(1)
+    args.test_iters = re.search('test_iter: (.*)\n', data).group(1)
     print('Snapshot_prefix: %s'%args.snapshot_prefix)
     print('Max Itr: %s'%args.max_itr)
     print('Test iters: %s'%args.test_iters)
+
+    d = os.path.dirname(args.snapshot_prefix)
+    if not os.path.exists(d):
+        os.makedirs(d)
 
     if args.cpu:
         caffe.set_mode_cpu()
