@@ -9,6 +9,11 @@ template <typename Dtype>
 void CuDNNTanHLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   TanHLayer<Dtype>::LayerSetUp(bottom, top);
+
+  if(handles_setup_) {
+    CleanUp();
+  }
+
   // initialize cuDNN
   CUDNN_CHECK(cudnnCreate(&handle_));
   cudnn::createTensor4dDesc<Dtype>(&bottom_desc_);
@@ -30,13 +35,18 @@ void CuDNNTanHLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 }
 
 template <typename Dtype>
+void CuDNNTanHLayer<Dtype>::CleanUp() {
+  cudnnDestroyTensorDescriptor(this->bottom_desc_);
+  cudnnDestroyTensorDescriptor(this->top_desc_);
+  cudnnDestroy(this->handle_);
+}
+
+template <typename Dtype>
 CuDNNTanHLayer<Dtype>::~CuDNNTanHLayer() {
   // Check that handles have been setup before destroying.
   if (!handles_setup_) { return; }
 
-  cudnnDestroyTensorDescriptor(this->bottom_desc_);
-  cudnnDestroyTensorDescriptor(this->top_desc_);
-  cudnnDestroy(this->handle_);
+  CleanUp();
 }
 
 INSTANTIATE_CLASS(CuDNNTanHLayer);

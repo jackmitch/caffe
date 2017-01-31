@@ -18,6 +18,11 @@ template <typename Dtype>
 void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   ConvolutionLayer<Dtype>::LayerSetUp(bottom, top);
+
+  if(handles_setup_) {
+    CleanUp();
+  }
+
   // Initialize CUDA streams and cuDNN.
   stream_         = new cudaStream_t[this->group_ * CUDNN_STREAMS_PER_GROUP];
   handle_         = new cudnnHandle_t[this->group_ * CUDNN_STREAMS_PER_GROUP];
@@ -232,15 +237,16 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
 }
 
 template <typename Dtype>
-CuDNNConvolutionLayer<Dtype>::~CuDNNConvolutionLayer() {
-  // Check that handles have been setup before destroying.
-  if (!handles_setup_) { return; }
-
+void CuDNNConvolutionLayer<Dtype>::CleanUp() {
   for (int i = 0; i < bottom_descs_.size(); i++) {
     cudnnDestroyTensorDescriptor(bottom_descs_[i]);
     cudnnDestroyTensorDescriptor(top_descs_[i]);
     cudnnDestroyConvolutionDescriptor(conv_descs_[i]);
   }
+  bottom_descs_.clear();
+  top_descs_.clear();
+  conv_descs_.clear();
+
   if (this->bias_term_) {
     cudnnDestroyTensorDescriptor(bias_desc_);
   }
@@ -252,14 +258,22 @@ CuDNNConvolutionLayer<Dtype>::~CuDNNConvolutionLayer() {
   }
 
   cudaFree(workspaceData);
-  delete [] stream_;
-  delete [] handle_;
-  delete [] fwd_algo_;
-  delete [] bwd_filter_algo_;
-  delete [] bwd_data_algo_;
-  delete [] workspace_fwd_sizes_;
-  delete [] workspace_bwd_data_sizes_;
-  delete [] workspace_bwd_filter_sizes_;
+  delete[] stream_;
+  delete[] handle_;
+  delete[] fwd_algo_;
+  delete[] bwd_filter_algo_;
+  delete[] bwd_data_algo_;
+  delete[] workspace_fwd_sizes_;
+  delete[] workspace_bwd_data_sizes_;
+  delete[] workspace_bwd_filter_sizes_;
+}
+
+template <typename Dtype>
+CuDNNConvolutionLayer<Dtype>::~CuDNNConvolutionLayer() {
+  // Check that handles have been setup before destroying.
+  if (!handles_setup_) { return; }
+
+  CleanUp();
 }
 
 INSTANTIATE_CLASS(CuDNNConvolutionLayer);
