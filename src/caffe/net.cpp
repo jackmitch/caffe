@@ -912,14 +912,14 @@ void Net<Dtype>::CopyTrainedLayersFromHDF5(const string trained_filename) {
 }
 
 template <typename Dtype>
-void Net<Dtype>::ToProto(NetParameter* param, bool write_diff, bool write_data) const {
+void Net<Dtype>::ToProto(NetParameter* param, bool write_diff, bool write_blobs) const {
   param->Clear();
   param->set_name(name_);
   // Add bottom and top
   DLOG(INFO) << "Serializing " << layers_.size() << " layers";
   for (int i = 0; i < layers_.size(); ++i) {
     LayerParameter* layer_param = param->add_layer();
-    layers_[i]->ToProto(layer_param, write_diff, write_data);
+    layers_[i]->ToProto(layer_param, write_diff, write_blobs);
   }
 }
 

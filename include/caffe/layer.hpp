@@ -212,7 +212,7 @@ class Layer {
   /**
    * @brief Writes the layer parameter to a protocol buffer
    */
-  virtual void ToProto(LayerParameter* param, bool write_diff = false, bool write_data = true);
+  virtual void ToProto(LayerParameter* param, bool write_diff = false, bool write_blobs = true);
 
   /**
    * @brief Returns the scalar loss associated with a top blob at a given index.
@@ -561,12 +561,14 @@ inline void Layer<Dtype>::Deconv(const vector<Blob<Dtype>*>& top,
 
 // Serialize LayerParameter to protocol buffer
 template <typename Dtype>
-void Layer<Dtype>::ToProto(LayerParameter* param, bool write_diff, bool write_data) {
+void Layer<Dtype>::ToProto(LayerParameter* param, bool write_diff, bool write_blobs) {
   param->Clear();
   param->CopyFrom(layer_param_);
   param->clear_blobs();
-  for (int i = 0; i < blobs_.size(); ++i) {
-    blobs_[i]->ToProto(param->add_blobs(), write_diff, write_data);
+  if (write_blobs) {
+    for (int i = 0; i < blobs_.size(); ++i) {
+      blobs_[i]->ToProto(param->add_blobs(), write_diff);
+    }
   }
 }
 
