@@ -266,7 +266,7 @@ def PruneChannels(solver, weights):
     start_size = CountNumParams(solver.net)
     comp_ratio = 1.0
 
-    f = open('%s/%s'(args.snapshot_prefix, 'channel_pruning.txt'), 'w')
+    f = open('%s/%s'%(args.snapshot_prefix, 'channel_pruning.txt'), 'w')
     f.write('compression_ratio,num_params,pre-fine-tune-accuracy,post-fine-tune-accuracy,pre-fine-tune-loss,post-fine-tune-loss\n')
     f.write('0,%.0f,0,0,0,0\n'%start_size)
     print('Starting param size %.0f\n'%start_size)
