@@ -141,8 +141,6 @@ def FineTuneUsingCmdLine(solver, tag):
     solver.net.copy_from('%s_%s'%(args.snapshot_prefix, 'iter_%s.caffemodel'%args.max_itr))
     solver.test_nets[0].copy_from('%s_%s'%(args.snapshot_prefix, 'iter_%s.caffemodel'%args.max_itr))
 
-    solver.net.save('%s_%s'%(args.snapshot_prefix, 'weights_%s.prototxt'%(tag,)))
-
     loss, acc = TestAccuracy(solver)
     return loss, acc
 
@@ -307,7 +305,7 @@ def PruneChannels(solver, weights):
         pre_loss, pre_acc = TestAccuracy(solver)
         post_loss, post_acc = FineTuneUsingCmdLine(solver, '%.3f'%(comp_ratio,)) # FineTune(solver, str(comp_ratio))
 
-        ostr = '%.3f,%.0f,%.3f,%.3f,%.3f,%.3f\n'%(comp_ratio, new_size, pre_acc, post_acc, pre_loss, post_loss)
+        ostr = '%.3f,%.0f,%.3f,%.3f,%.3f,%.3f'%(comp_ratio, new_size, pre_acc, post_acc, pre_loss, post_loss)
         f.write('%s\n'%ostr) 
         f.flush()
         os.fsync(f.fileno())
