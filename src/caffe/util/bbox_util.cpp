@@ -768,6 +768,7 @@ void FindMatches(const vector<LabelBBox>& all_loc_preds,
       all_match_overlaps->push_back(match_overlaps);
       continue;
     }
+
     // Find match between predictions and ground truth.
     const vector<NormalizedBBox>& gt_bboxes = all_gt_bboxes.find(i)->second;
     if (!use_prior_for_matching) {
@@ -895,6 +896,8 @@ void MineHardExamples(const Blob<Dtype>& conf_blob,
   const bool encode_variance_in_target =
       multibox_loss_param.encode_variance_in_target();
   const bool has_nms_param = multibox_loss_param.has_nms_param();
+  const uint32_t min_num_negs = multibox_loss_param.min_num_negs();
+
   float nms_threshold = 0;
   int top_k = -1;
   if (has_nms_param) {
@@ -969,7 +972,9 @@ void MineHardExamples(const Blob<Dtype>& conf_blob,
             ++num_pos;
           }
         }
-        num_sel = std::min(static_cast<int>(num_pos * neg_pos_ratio), num_sel);
+        num_sel = std::min<int>(num_sel, min_num_negs);
+        num_sel = std::max(static_cast<int>(num_pos * neg_pos_ratio), num_sel);
+
       } else if (mining_type == MultiBoxLossParameter_MiningType_HARD_EXAMPLE) {
         CHECK_GT(sample_size, 0);
         num_sel = std::min(sample_size, num_sel);

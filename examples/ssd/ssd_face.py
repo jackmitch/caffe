@@ -233,6 +233,7 @@ background_label_id=0
 train_on_diff_gt = True
 normalization_mode = P.Loss.VALID
 code_type = P.PriorBox.CENTER_SIZE
+mining_type = P.MultiBoxLoss.MAX_NEGATIVE
 neg_pos_ratio = 3.
 loc_weight = (neg_pos_ratio + 1.) / 4.
 multibox_loss_param = {
@@ -247,10 +248,12 @@ multibox_loss_param = {
     'background_label_id': background_label_id,
     'use_difficult_gt': train_on_diff_gt,
     'do_neg_mining': True,
+    'mining_type': mining_type,
     'neg_pos_ratio': neg_pos_ratio,
     'neg_overlap': 0.5,
     'code_type': code_type,
-    'min_num_negs': 200
+    'min_num_negs': 200,
+    'ignore_imgs_with_no_gt': false
     }
 loss_param = {
     'normalization': normalization_mode,

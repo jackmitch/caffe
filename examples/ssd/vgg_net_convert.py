@@ -28,6 +28,7 @@ for conv in params_full_conv:
 print conv_params['fc6-conv'][0].shape
 print conv_params['fc7-conv'][0].shape
 
+# reshape to fully convolutional layers subsampled to 1024x512x3x3 filter
 conv_params['fc6-conv'][0][...] = fc_params['fc6'][0].reshape(4096, 512, 7, 7)[::4, :, ::3, ::3]
 conv_params['fc6-conv'][1][...] = fc_params['fc6'][1][::4]
 

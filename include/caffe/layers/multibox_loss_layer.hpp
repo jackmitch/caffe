@@ -92,7 +92,6 @@ class MultiBoxLossLayer : public LossLayer<Dtype> {
   bool ignore_cross_boundary_bbox_;
   bool bp_inside_;
   MiningType mining_type_;
-  int min_num_negs_;
 
   int loc_classes_;
   int num_gt_;

@@ -33,8 +33,16 @@ void MultiBoxLossLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   background_label_id_ = multibox_loss_param.background_label_id();
   use_difficult_gt_ = multibox_loss_param.use_difficult_gt();
 
-  min_num_negs_ = multibox_loss_param.min_num_negs();
   mining_type_ = multibox_loss_param.mining_type();
+
+  if (multibox_loss_param.min_num_negs() > 1) {
+    CHECK_EQ(mining_type_, MultiBoxLossParameter_MiningType_MAX_NEGATIVE) <<
+      "min_num_negs can only be used with MAX_NEGATIVE mining_type";
+
+    CHECK_EQ(multibox_loss_param.has_nms_param(), false) <<
+      "min_num_negs cannot be used with nms negative selection";
+  }
+
   if (multibox_loss_param.has_do_neg_mining()) {
     LOG(WARNING) << "do_neg_mining is deprecated, use mining_type instead.";
     do_neg_mining_ = multibox_loss_param.do_neg_mining();
@@ -167,6 +175,15 @@ void MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   vector<LabelBBox> all_loc_preds;
   GetLocPredictions(loc_data, num_, num_priors_, loc_classes_, share_location_,
                     &all_loc_preds);
+
+  // if we want to use negative patches from images with no ground truth we need to an
+  // empty vector so it they get used in FindMatches
+  int num = all_loc_preds.size();
+  for (int i = 0; i < num; ++i) {
+    if (multibox_loss_param_.include_imgs_with_no_gt() && all_gt_bboxes.find(i) == all_gt_bboxes.end()) {
+      all_gt_bboxes[i] = vector<NormalizedBBox>();
+    }
+  }
 
   // Find matches between source bboxes and ground truth bboxes.
   vector<map<int, vector<float> > > all_match_overlaps;

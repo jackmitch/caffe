@@ -1347,6 +1347,7 @@ message MultiBoxLossParameter {
 
   // The minimum number of negative boxes to add to the confidence loss
   optional uint32 min_num_negs = 24 [default = 1];
+  optional bool include_imgs_with_no_gt = 25 [default = false];
 }
 
 message MVNParameter {
