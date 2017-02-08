@@ -1429,6 +1429,7 @@ message PriorBoxParameter {
     CORNER = 1;
     CENTER_SIZE = 2;
     CORNER_SIZE = 3;
+    YOLO = 4;	// Box encoding matches Yolo Box Coords - limits box offset
   }
   // Minimum box size (in pixels). Required!
   repeated float min_size = 1;
@@ -1462,6 +1463,9 @@ message PriorBoxParameter {
 
   // Offset to the top left corner of each cell.
   optional float offset = 13 [default = 0.5];
+
+  // the way the box is encoded
+  optional CodeType code_type = 14 [default = CORNER];
 }
 
 message PythonParameter {

@@ -81,6 +81,7 @@ class PriorBoxLayer : public Layer<Dtype> {
   float step_h_;
 
   float offset_;
+  PriorBoxParameter::CodeType code_type_;
 };
 
 }  // namespace caffe

@@ -97,6 +97,7 @@ void PriorBoxLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   }
 
   offset_ = prior_box_param.offset();
+  code_type_ = prior_box_param.code_type();
 }
 
 template <typename Dtype>
@@ -208,9 +209,17 @@ void PriorBoxLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     for (int h = 0; h < layer_height; ++h) {
       for (int w = 0; w < layer_width; ++w) {
         for (int i = 0; i < num_priors_; ++i) {
-          for (int j = 0; j < 4; ++j) {
-            top_data[count] = variance_[j];
-            ++count;
+          if (code_type_ == PriorBoxParameter::YOLO) {
+            top_data[count++] = img_width;
+            top_data[count++] = img_height;
+            top_data[count++] = variance_[2];
+            top_data[count++] = variance_[3];
+          }
+          else {
+            for (int j = 0; j < 4; ++j) {
+              top_data[count] = variance_[j];
+              ++count;
+            }
           }
         }
       }

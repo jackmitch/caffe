@@ -22,6 +22,8 @@ void MultiBoxLossLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       this->layer_param_.multibox_loss_param();
   multibox_loss_param_ = this->layer_param_.multibox_loss_param();
 
+  code_type_ = multibox_loss_param_.code_type();
+
   num_ = bottom[0]->num();
   num_priors_ = bottom[2]->height() / 4;
   // Get other parameters.
@@ -145,6 +147,7 @@ void MultiBoxLossLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   num_ = bottom[0]->num();
   num_priors_ = bottom[2]->height() / 4;
   num_gt_ = bottom[3]->height();
+  
   CHECK_EQ(bottom[0]->num(), bottom[1]->num());
   CHECK_EQ(num_priors_ * loc_classes_ * 4, bottom[0]->channels())
       << "Number of priors must match number of location predictions.";
@@ -178,10 +181,12 @@ void MultiBoxLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
   // if we want to use negative patches from images with no ground truth we need to an
   // empty vector so it they get used in FindMatches
-  int num = all_loc_preds.size();
-  for (int i = 0; i < num; ++i) {
-    if (multibox_loss_param_.include_imgs_with_no_gt() && all_gt_bboxes.find(i) == all_gt_bboxes.end()) {
-      all_gt_bboxes[i] = vector<NormalizedBBox>();
+  if (multibox_loss_param_.include_imgs_with_no_gt())
+  {
+    for (int i = 0; i < all_loc_preds.size(); ++i) {
+      if (all_gt_bboxes.find(i) == all_gt_bboxes.end()) {
+        all_gt_bboxes[i] = vector<NormalizedBBox>();
+      }
     }
   }
 

@@ -367,7 +367,8 @@ bool MeetEmitConstraint(const NormalizedBBox& src_bbox,
 void EncodeBBox(
     const NormalizedBBox& prior_bbox, const vector<float>& prior_variance,
     const CodeType code_type, const bool encode_variance_in_target,
-    const NormalizedBBox& bbox, NormalizedBBox* encode_bbox) {
+    const NormalizedBBox& bbox,
+    NormalizedBBox* encode_bbox) {
   if (code_type == PriorBoxParameter_CodeType_CORNER) {
     if (encode_variance_in_target) {
       encode_bbox->set_xmin(bbox.xmin() - prior_bbox.xmin());
@@ -445,10 +446,41 @@ void EncodeBBox(
       encode_bbox->set_ymax(
           (bbox.ymax() - prior_bbox.ymax()) / prior_height / prior_variance[3]);
     }
-  } else {
+  } else if (code_type == PriorBoxParameter_CodeType_YOLO) {
+    float prior_width = prior_bbox.xmax() - prior_bbox.xmin();
+    CHECK_GT(prior_width, 0);
+    float prior_height = prior_bbox.ymax() - prior_bbox.ymin();
+    CHECK_GT(prior_height, 0);
+    float prior_center_x = (prior_bbox.xmin() + prior_bbox.xmax()) / 2.;
+    float prior_center_y = (prior_bbox.ymin() + prior_bbox.ymax()) / 2.;
+
+    float bbox_width = bbox.xmax() - bbox.xmin();
+    CHECK_GT(bbox_width, 0);
+    float bbox_height = bbox.ymax() - bbox.ymin();
+    CHECK_GT(bbox_height, 0);
+    float bbox_center_x = (bbox.xmin() + bbox.xmax()) / 2.;
+    float bbox_center_y = (bbox.ymin() + bbox.ymax()) / 2.;
+
+    // HACK: to use prior_variance to represent the feature map size the priror boxes were laid onto
+    // YOLO boxes limit the offset boxes can move by. Limit to one feature map square
+    encode_bbox->set_xmin(log((1. / ((bbox_center_x - prior_center_x)*prior_variance[0])) - 1.));
+    encode_bbox->set_ymin(log((1. / ((bbox_center_y - prior_center_y)*prior_variance[1])) - 1.));
+
+    if (encode_variance_in_target) {
+      encode_bbox->set_xmax(log(bbox_width / prior_width));
+      encode_bbox->set_ymax(log(bbox_height / prior_height));
+    }
+    else {
+      // Encode variance in bbox.
+      encode_bbox->set_xmax(log(bbox_width / prior_width) / prior_variance[2]);
+      encode_bbox->set_ymax(log(bbox_height / prior_height) / prior_variance[3]);
+    }
+  }  else {
     LOG(FATAL) << "Unknown LocLossType.";
   }
 }
+
+static inline float logistic_activate(float x){ return 1. / (1. + exp(-x)); }
 
 void DecodeBBox(
     const NormalizedBBox& prior_bbox, const vector<float>& prior_variance,
@@ -530,7 +562,42 @@ void DecodeBBox(
       decode_bbox->set_ymax(
           prior_bbox.ymax() + prior_variance[3] * bbox.ymax() * prior_height);
     }
-  } else {
+  }
+  else if (code_type == PriorBoxParameter_CodeType_YOLO) {
+
+    float prior_width = prior_bbox.xmax() - prior_bbox.xmin();
+    CHECK_GT(prior_width, 0);
+    float prior_height = prior_bbox.ymax() - prior_bbox.ymin();
+    CHECK_GT(prior_height, 0);
+    float prior_center_x = (prior_bbox.xmin() + prior_bbox.xmax()) / 2.;
+    float prior_center_y = (prior_bbox.ymin() + prior_bbox.ymax()) / 2.;
+
+    float decode_bbox_center_x, decode_bbox_center_y;
+    float decode_bbox_width, decode_bbox_height;
+
+    // HACK: to use prior_variance to represent the feature map size the priror boxes were laid onto
+    // YOLO boxes limit the offset boxes can move by. Limit to one feature map square
+    decode_bbox_center_x = prior_center_x + logistic_activate(bbox.xmin()) / prior_variance[0];
+    decode_bbox_center_y = prior_center_y + logistic_activate(bbox.ymin()) / prior_variance[1];
+
+    if (variance_encoded_in_target) {
+      // variance is encoded in target, we simply need to retore the offset
+      // predictions.
+      decode_bbox_width = exp(bbox.xmax()) * prior_width;
+      decode_bbox_height = exp(bbox.ymax()) * prior_height;
+    }
+    else {
+      // variance is encoded in bbox, we need to scale the offset accordingly.
+      decode_bbox_width = exp(prior_variance[2] * bbox.xmax()) * prior_width;
+      decode_bbox_height = exp(prior_variance[3] * bbox.ymax()) * prior_height;
+    }
+
+    decode_bbox->set_xmin(decode_bbox_center_x - decode_bbox_width / 2.);
+    decode_bbox->set_ymin(decode_bbox_center_y - decode_bbox_height / 2.);
+    decode_bbox->set_xmax(decode_bbox_center_x + decode_bbox_width / 2.);
+    decode_bbox->set_ymax(decode_bbox_center_y + decode_bbox_height / 2.);
+  }
+  else {
     LOG(FATAL) << "Unknown LocLossType.";
   }
   float bbox_size = BBoxSize(*decode_bbox);
@@ -556,7 +623,8 @@ void DecodeBBoxes(
   for (int i = 0; i < num_bboxes; ++i) {
     NormalizedBBox decode_bbox;
     DecodeBBox(prior_bboxes[i], prior_variances[i], code_type,
-               variance_encoded_in_target, clip_bbox, bboxes[i], &decode_bbox);
+               variance_encoded_in_target, clip_bbox, bboxes[i], 
+               &decode_bbox);
     decode_bboxes->push_back(decode_bbox);
   }
 }
@@ -1234,8 +1302,7 @@ void EncodeLocPrediction(const vector<LabelBBox>& all_loc_preds,
           if (!use_prior_for_matching) {
             const bool clip_bbox = false;
             DecodeBBox(prior_bboxes[j], prior_variances[j], code_type,
-                       encode_variance_in_target, clip_bbox, loc_pred[j],
-                       &match_bbox);
+                       encode_variance_in_target, clip_bbox, loc_pred[j], &match_bbox);
           }
           // When a dimension of match_bbox is outside of image region, use
           // gt_encode to simulate zero gradient.

@@ -39,7 +39,7 @@ def AddExtraLayers(net, use_batchnorm=True):
 
     return net
 
-
+	
 ### Modify the following parameters accordingly ###
 # The directory which contains the caffe code.
 # We assume you are running the script at the CAFFE_ROOT.
@@ -247,13 +247,12 @@ multibox_loss_param = {
     'use_prior_for_matching': True,
     'background_label_id': background_label_id,
     'use_difficult_gt': train_on_diff_gt,
-    'do_neg_mining': True,
     'mining_type': mining_type,
     'neg_pos_ratio': neg_pos_ratio,
     'neg_overlap': 0.5,
     'code_type': code_type,
     'min_num_negs': 200,
-    'ignore_imgs_with_no_gt': false
+    'include_imgs_with_no_gt': True
     }
 loss_param = {
     'normalization': normalization_mode,
@@ -277,12 +276,26 @@ max_box_size = 700
 # conv8_2 ==> 3 x 3
 # pool6 ==> 1 x 1
 
+# aspect ratio is used to calculate starting box width and height using width * sqrt(ap) and height / sqrt(ap)
+# each list in the list is the aspect ratios for each layer in mbox_source_layers. There is always a prior with
+# aspect ratio 1 by default at min and max size (from min_sizes and max_sizes).
+aspect_ratios = []
+
+# L2 normalize
+normalizations = []
+
 if model_basename == 'VGG_M':
   mbox_source_layers = ['conv4', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+  aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
+  normalizations = [20, -1, -1, -1, -1, -1]
 elif model_basename == 'SQUEEZE':
   mbox_source_layers = ['fire9/concat', 'conv10', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+  aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
+  normalizations = [20, -1, -1, -1, -1, -1]
 else:
-  mbox_source_layers = ['conv4_3', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+  mbox_source_layers = ['conv3_3', 'conv4_3', 'conv5_3', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+  aspect_ratios = [[2], [2], [2], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
+  normalizations = [6, 4, 4, -1, -1, -1, -1, -1]
 
 # in percent %
 min_ratio = 20
@@ -304,19 +317,14 @@ for box_size in xrange(min_box_size, max_box_size, step):
   print(min_sizes[cnt])
   print(max_sizes[cnt])
   cnt = cnt + 1
+  if len(mbox_source_layers) == len(min_sizes):
+    break
 
 #min_sizes = [[]] + min_sizes
 #max_sizes = [[]] + max_sizes
 print(len(min_sizes))
 print(len(mbox_source_layers))
 
-# aspect ratio is used to calculate starting box width and height using width * sqrt(ap) and height / sqrt(ap)
-# each list in the list is the aspect ratios for each layer in mbox_source_layers. There is always a prior with
-# aspect ratio 1 by default at min and max size (from min_sizes and max_sizes).
-aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
-
-# L2 normalize conv4_3.
-normalizations = [20, -1, -1, -1, -1, -1]
 # variance used to encode/decode prior bboxes.
 if code_type == P.PriorBox.CENTER_SIZE:
   prior_variance = [0.1, 0.1, 0.2, 0.2]
@@ -335,12 +343,12 @@ num_gpus = len(gpulist)
 
 # Divide the mini-batch to different GPUs.
 batch_size = 32
-accum_batch_size = 32
+accum_batch_size = 256
 
 if model_basename == 'VGG_M':
   batch_size = 128
   accum_batch_size = 128
-elif models_basename == 'SQUEEZE':
+elif model_basename == 'SQUEEZE':
   batch_size = 128
   accum_batch_size = 128
   
@@ -451,15 +459,15 @@ net.data, net.label = CreateAnnotatedDataLayer(train_data, batch_size=batch_size
         transform_param=train_transform_param, batch_sampler=batch_sampler)
 
 if model_basename == 'VGG_M':
-	print("USING VGG_M model")
-	VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
-				dropout=False, freeze_layers=freeze_layers)
+  print("USING VGG_M model")
+  VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
+                dropout=False, freeze_layers=freeze_layers)
 elif model_basename == 'SQUEEZE':
-    print("USING SQUEEZE NET MODEL")
-    SqueezeNetBody(net, from_layer='data', freeze_layers=freeze_layers)
+  print("USING SQUEEZE NET MODEL")
+  SqueezeNetBody(net, from_layer='data', freeze_layers=freeze_layers)
 else:
-	VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
-				dropout=False, freeze_layers=freeze_layers)
+  VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
+             dropout=False, freeze_layers=freeze_layers)
 				
 AddExtraLayers(net, use_batchnorm)
 
@@ -472,6 +480,10 @@ mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source
 # Create the MultiBoxLossLayer.
 name = "mbox_loss"
 mbox_layers.append(net.label)
+
+if code_type == P.PriorBox.YOLO:
+  mbox_layers.append('data')
+  
 net[name] = L.MultiBoxLoss(*mbox_layers, multibox_loss_param=multibox_loss_param,
         loss_param=loss_param, include=dict(phase=caffe_pb2.Phase.Value('TRAIN')),
         propagate_down=[True, True, False, False])
@@ -517,6 +529,9 @@ elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
   net[sigmoid_name] = L.Sigmoid(net[conf_name])
   mbox_layers[1] = net[sigmoid_name]
 
+if code_type == P.PriorBox.YOLO:
+  mbox_layers.append('data')
+  
 net.detection_out = L.DetectionOutput(*mbox_layers,
     detection_output_param=det_out_param,
     include=dict(phase=caffe_pb2.Phase.Value('TEST')))

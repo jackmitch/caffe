@@ -181,6 +181,52 @@ __global__ void DecodeBBoxesKernel(const int nthreads,
         bbox_data[index] =
           prior_data[pi + i] + loc_data[index] * prior_data[vi + i] * p_size;
       }
+    } else if (code_type == PriorBoxParameter_CodeType_YOLO) {
+      const Dtype p_xmin = prior_data[pi];
+      const Dtype p_ymin = prior_data[pi + 1];
+      const Dtype p_xmax = prior_data[pi + 2];
+      const Dtype p_ymax = prior_data[pi + 3];
+      const Dtype prior_width = p_xmax - p_xmin;
+      const Dtype prior_height = p_ymax - p_ymin;
+      const Dtype prior_center_x = (p_xmin + p_xmax) / 2.;
+      const Dtype prior_center_y = (p_ymin + p_ymax) / 2.;
+
+      const Dtype xmin = loc_data[index - i];
+      const Dtype ymin = loc_data[index - i + 1];
+      const Dtype xmax = loc_data[index - i + 2];
+      const Dtype ymax = loc_data[index - i + 3];
+
+      Dtype decode_bbox_center_x, decode_bbox_center_y;
+      Dtype decode_bbox_width, decode_bbox_height;
+	  
+	  decode_bbox_center_x = prior_center_x + (1. / (1. + exp(-xmin))) / prior_data[vi];
+      decode_bbox_center_y = prior_center_y + (1. / (1. + exp(-ymin))) / prior_data[vi + 1];
+	
+      if (variance_encoded_in_target) {
+        // variance is encoded in target, we simply need to retore the offset
+        // predictions.
+        decode_bbox_width = exp(xmax) * prior_width;
+        decode_bbox_height = exp(ymax) * prior_height;
+      } else {
+        // variance is encoded in bbox, we need to scale the offset accordingly.
+        decode_bbox_width = exp(prior_data[vi + 2] * xmax) * prior_width;
+        decode_bbox_height = exp(prior_data[vi + 3] * ymax) * prior_height;
+      }
+
+      switch (i) {
+        case 0:
+          bbox_data[index] = decode_bbox_center_x - decode_bbox_width / 2.;
+          break;
+        case 1:
+          bbox_data[index] = decode_bbox_center_y - decode_bbox_height / 2.;
+          break;
+        case 2:
+          bbox_data[index] = decode_bbox_center_x + decode_bbox_width / 2.;
+          break;
+        case 3:
+          bbox_data[index] = decode_bbox_center_y + decode_bbox_height / 2.;
+          break;
+      }
     } else {
       // Unknown code type.
     }

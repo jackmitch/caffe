@@ -613,13 +613,11 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   const int num = transformed_blob->num();
 
   CHECK_GT(img_channels, 0);
-  CHECK(cv_img.depth() == CV_8U) << "Image data type must be unsigned byte";
+  CHECK(cv_img.depth() == CV_8U || cv_img.depth() == CV_32F) << "Image data type must be unsigned byte or float";
   CHECK_EQ(channels, img_channels);
   CHECK_GE(num, 1);
 
   const int crop_size = param_.crop_size();
-
-  CHECK(cv_img.depth() == CV_8U || cv_img.depth() == CV_32F) << "Image data type must be unsigned byte or float";
 
   const Dtype scale = param_.scale();
   *do_mirror = param_.mirror() && Rand(2);
