@@ -22,6 +22,7 @@ void ROIPoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   pooled_height_ = roi_pool_param.pooled_h();
   pooled_width_ = roi_pool_param.pooled_w();
   spatial_scale_ = roi_pool_param.spatial_scale();
+  default_roi_.Reshape(1, 1, 1, 5);
   LOG(INFO) << "Spatial scale: " << spatial_scale_;
 }
 
@@ -31,19 +32,37 @@ void ROIPoolingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   channels_ = bottom[0]->channels();
   height_ = bottom[0]->height();
   width_ = bottom[0]->width();
-  top[0]->Reshape(bottom[1]->num(), channels_, pooled_height_,
-      pooled_width_);
-  max_idx_.Reshape(bottom[1]->num(), channels_, pooled_height_,
-      pooled_width_);
+
+  // default roi is the feature map of the input
+  Dtype *data = default_roi_.mutable_cpu_data();
+  data[0] = bottom[0]->num();
+  data[1] = 0;
+  data[2] = 0;
+  data[3] = static_cast<Dtype>(width_);
+  data[4] = static_cast<Dtype>(height_);
+
+  if (bottom.size() < 2) {
+    top[0]->Reshape(1, channels_, pooled_height_, pooled_width_);
+    max_idx_.Reshape(1, channels_, pooled_height_, pooled_width_);
+  }
+  else {
+    top[0]->Reshape(bottom[1]->num(), channels_, pooled_height_,
+                    pooled_width_);
+    max_idx_.Reshape(bottom[1]->num(), channels_, pooled_height_,
+                    pooled_width_);
+  }
 }
 
 template <typename Dtype>
 void ROIPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
+
   const Dtype* bottom_data = bottom[0]->cpu_data();
-  const Dtype* bottom_rois = bottom[1]->cpu_data();
+
+  const Dtype* bottom_rois = (bottom.size() < 2) ? default_roi_.cpu_data() : bottom[1]->cpu_data();
+
   // Number of ROIs
-  int num_rois = bottom[1]->num();
+  int num_rois = (bottom.size() < 2) ? 1 : bottom[1]->num();
   int batch_size = bottom[0]->num();
   int top_count = top[0]->count();
   Dtype* top_data = top[0]->mutable_cpu_data();
@@ -129,7 +148,9 @@ void ROIPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   if (!propagate_down[0]) {
     return;
   }
-  const Dtype* bottom_rois = bottom[1]->cpu_data();
+
+  const Dtype* bottom_rois = (bottom.size() < 2) ? default_roi_.cpu_data() : bottom[1]->cpu_data();
+
   const Dtype* top_diff = top[0]->cpu_diff();
   Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
   caffe_set(bottom[0]->count(), Dtype(0.), bottom_diff);

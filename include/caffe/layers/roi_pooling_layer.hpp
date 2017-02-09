@@ -77,6 +77,7 @@ class ROIPoolingLayer : public Layer<Dtype> {
   int pooled_width_;
   Dtype spatial_scale_;
   Blob<int> max_idx_;
+  Blob<Dtype> default_roi_;
 };
 
 }  // namespace caffe

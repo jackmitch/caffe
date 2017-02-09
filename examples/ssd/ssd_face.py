@@ -1,7 +1,4 @@
 from __future__ import print_function
-import caffe
-from caffe.model_libs import *
-from google.protobuf import text_format
 
 import math
 import os
@@ -9,6 +6,11 @@ import shutil
 import stat
 import subprocess
 import sys
+
+#sys.path.insert(0, 'C:\\\\Users\\JLeigh\\MyProjects\\OMGLife\\visp\\caffe\\build\\x64\\Release\\pycaffe')
+import caffe
+from caffe.model_libs import *
+from google.protobuf import text_format
 
 # Add extra layers on top of a "base" network (e.g. VGGNet or Inception).
 def AddExtraLayers(net, use_batchnorm=True):
@@ -39,7 +41,46 @@ def AddExtraLayers(net, use_batchnorm=True):
 
     return net
 
-	
+
+# Add a layer that merges the given conv layers into a single output allowing boxes
+# to be defined using information from multiple layers
+def AddConvConcatLayers(net_spec, conv_layer_names, output_name, normalizations, weights_file, use_batchnorm=True):
+    # find the conv layer with the smallest output size
+    with open('tmp.prototxt', 'w') as f:
+      print('name: "{}_train"'.format(model_name), file=f)
+      print(net_spec.to_proto(), file=f)
+    net = caffe.Net(network_file='tmp.prototxt', weights=weights_file , phase=caffe.TRAIN)
+    min_width = min_height = 9e9
+    
+    for name in conv_layer_names:
+        if net.blobs[name].shape[2] < min_width and net.blobs[name].shape[3] < min_height:
+            min_layer = name
+            min_width = net.blobs[name].shape[2]
+            min_height = net.blobs[name].shape[3]
+
+    concat_layers = []
+    i = 0
+    for name in conv_layer_names:
+        pooling_layer = name + '_pooling'
+        norm_layer = name + '_norm'
+        if name != min_layer:
+            net_spec[pooling_layer] = L.ROIPooling(net_spec[name], pooled_w=min_width, pooled_h=min_height)
+            net_spec[norm_layer] = L.Normalize(net_spec[pooling_layer],  
+                                               scale_filler=dict(type="constant", value=normalizations[i]),
+                                               across_spatial=False, channel_shared=False)
+        else:
+            net_spec[norm_layer] = L.Normalize(net_spec[name],  
+                                               scale_filler=dict(type="constant", value=normalizations[i]),
+                                               across_spatial=False, channel_shared=False)
+        concat_layers.append(net_spec[norm_layer])
+        i += 1
+
+	# layers get joined via a concat
+    net_spec['conv_concat'] = L.Concat(*concat_layers, axis=1)
+    ConvBNLayer(net_spec, 'conv_concat', output_name, use_batchnorm, True, 512, 1, 0, 1)
+    return net_spec
+
+
 ### Modify the following parameters accordingly ###
 # The directory which contains the caffe code.
 # We assume you are running the script at the CAFFE_ROOT.
@@ -284,6 +325,16 @@ aspect_ratios = []
 # L2 normalize
 normalizations = []
 
+# used if we combine conv layers into a single layer and apply a boxes to that allows boxes to be predicted
+# using features at different scales (across feature layers)
+conv_concat_output_layer = 'conv_mega'
+conv_concat_layers = []
+conv_concat_normalisations = []
+
+#if model_basename == 'VGG_D':
+#  conv_concat_layers = ['conv3_3', 'conv4_3', 'conv5_3']
+#  conv_concat_normalisations = [20, 20, 20]
+
 if model_basename == 'VGG_M':
   mbox_source_layers = ['conv4', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
   aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
@@ -293,9 +344,14 @@ elif model_basename == 'SQUEEZE':
   aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
   normalizations = [20, -1, -1, -1, -1, -1]
 else:
-  mbox_source_layers = ['conv3_3', 'conv4_3', 'conv5_3', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
-  aspect_ratios = [[2], [2], [2], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
-  normalizations = [6, 4, 4, -1, -1, -1, -1, -1]
+  if len(conv_concat_layers) == 0:
+    mbox_source_layers = ['conv3_3', 'conv4_3', 'conv5_3', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+    aspect_ratios = [[2], [2], [2], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
+    normalizations = [6, 4, 4, -1, -1, -1, -1, -1]
+  else:
+    mbox_source_layers = ['conv_mega', 'fc7-conv', 'conv6_2', 'conv7_2', 'conv8_2', 'pool6']
+    aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
+    normalizations = [20, -1, -1, -1, -1, -1]
 
 # in percent %
 min_ratio = 20
@@ -343,7 +399,7 @@ num_gpus = len(gpulist)
 
 # Divide the mini-batch to different GPUs.
 batch_size = 32
-accum_batch_size = 256
+accum_batch_size = 128
 
 if model_basename == 'VGG_M':
   batch_size = 128
@@ -398,7 +454,7 @@ solver_param = {
     'momentum': 0.9,
     'iter_size': iter_size,
     'max_iter': 240000,
-    'snapshot': 5000,
+    'snapshot': 10000,
     'display': 10,
     'average_loss': 10,
     'type': "SGD",
@@ -408,7 +464,7 @@ solver_param = {
     'snapshot_after_train': True,
     # Test parameters
     'test_iter': [test_iter],
-    'test_interval': 20000,
+    'test_interval': 2500,
     'eval_type': "detection",
     'ap_version': "11point",
     'test_initialization': False,
@@ -468,7 +524,11 @@ elif model_basename == 'SQUEEZE':
 else:
   VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
              dropout=False, freeze_layers=freeze_layers)
-				
+
+if len(conv_concat_layers) > 0:
+    AddConvConcatLayers(net, conv_concat_layers, conv_concat_output_layer, 
+                        conv_concat_normalisations, pretrain_model_weights, use_batchnorm)
+
 AddExtraLayers(net, use_batchnorm)
 
 mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source_layers,
@@ -502,11 +562,11 @@ if model_basename == 'VGG_M':
   VGG_M_NetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
                 dropout=False, freeze_layers=freeze_layers)
 elif model_basename == 'SQUEEZE':
-    SqueezeNetBody(net, from_layer='data', freeze_layers=freeze_layers)
+  SqueezeNetBody(net, from_layer='data', freeze_layers=freeze_layers)
 else:
   VGGNetBody(net, from_layer='data', fully_conv=True, reduced=True, dilated=True,
              dropout=False, freeze_layers=freeze_layers)
-				
+
 AddExtraLayers(net, use_batchnorm)
 
 mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source_layers,

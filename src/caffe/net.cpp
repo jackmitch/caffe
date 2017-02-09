@@ -39,7 +39,7 @@ Net<Dtype>::Net(const string& param_file, Phase phase,
   // Set phase, stages and level
   param.mutable_state()->set_phase(phase);
   if (stages != NULL) {
-    for (int i = 0; i < stages->size(); i++) {
+    for (int i = 0; i < stages->size(); ++i) {
       param.mutable_state()->add_stage((*stages)[i]);
     }
   }

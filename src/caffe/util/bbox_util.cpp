@@ -684,7 +684,7 @@ void MatchBBox(const vector<NormalizedBBox>& gt_bboxes,
     // Count number of ground truth boxes which has the desired label.
     for (int i = 0; i < gt_bboxes.size(); ++i) {
       if (gt_bboxes[i].label() == label) {
-        num_gt++;
+        ++num_gt;
         gt_indices.push_back(i);
       }
     }
@@ -1040,8 +1040,8 @@ void MineHardExamples(const Blob<Dtype>& conf_blob,
             ++num_pos;
           }
         }
-        num_sel = std::min<int>(num_sel, min_num_negs);
-        num_sel = std::max(static_cast<int>(num_pos * neg_pos_ratio), num_sel);
+        int tmp = std::max<int>(static_cast<int>(num_pos * neg_pos_ratio), min_num_negs);
+        num_sel = std::min<int>(tmp, num_sel);
 
       } else if (mining_type == MultiBoxLossParameter_MiningType_HARD_EXAMPLE) {
         CHECK_GT(sample_size, 0);
@@ -1452,7 +1452,7 @@ void GetConfidenceScores(const Dtype* conf_data, const int num,
     map<int, vector<float> >& label_scores = (*conf_preds)[i];
     if (class_major) {
       for (int c = 0; c < num_classes; ++c) {
-        for (int p = 0; p < num_preds_per_class; p++) {
+        for (int p = 0; p < num_preds_per_class; ++p) {
           label_scores[c].push_back((float)(*(conf_data + p)));
         }
         conf_data += num_preds_per_class;

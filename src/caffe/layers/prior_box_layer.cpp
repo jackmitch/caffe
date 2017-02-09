@@ -210,8 +210,8 @@ void PriorBoxLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       for (int w = 0; w < layer_width; ++w) {
         for (int i = 0; i < num_priors_; ++i) {
           if (code_type_ == PriorBoxParameter::YOLO) {
-            top_data[count++] = img_width;
-            top_data[count++] = img_height;
+            top_data[count++] = layer_width;
+            top_data[count++] = layer_height;
             top_data[count++] = variance_[2];
             top_data[count++] = variance_[3];
           }

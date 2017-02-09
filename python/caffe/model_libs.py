@@ -492,7 +492,7 @@ def VGGNetBody(net, from_layer, need_fc=True, fully_conv=False, reduced=False,
                     num_output = 4096
             pad = int((kernel_size + (dilation - 1) * (kernel_size - 1)) - 1) / 2
             #net.fc6 = L.Convolution(net[name], num_output=num_output, pad=pad, kernel_size=kernel_size, dilation=dilation, **kwargs)
-			net['fc6-conv'] = L.Convolution(net[name], num_output=num_output, pad=pad, kernel_size=kernel_size, dilation=dilation, **kwargs)
+            net['fc6-conv'] = L.Convolution(net[name], num_output=num_output, pad=pad, kernel_size=kernel_size, dilation=dilation, **kwargs)
 
             net.relu6 = L.ReLU(net['fc6-conv'], in_place=True)
             if dropout:

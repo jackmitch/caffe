@@ -76,7 +76,10 @@ template <typename Dtype>
 void ROIPoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   const Dtype* bottom_data = bottom[0]->gpu_data();
-  const Dtype* bottom_rois = bottom[1]->gpu_data();
+  const Dtype* bottom_rois = (bottom.size() < 2) ? 
+                             default_roi_.gpu_data() : 
+                             bottom[1]->gpu_data();
+
   Dtype* top_data = top[0]->mutable_gpu_data();
   int* argmax_data = max_idx_.mutable_gpu_data();
   int count = top[0]->count();
@@ -166,7 +169,10 @@ void ROIPoolingLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   if (!propagate_down[0]) {
     return;
   }
-  const Dtype* bottom_rois = bottom[1]->gpu_data();
+  const Dtype* bottom_rois = (bottom.size() < 2) ? 
+							default_roi_.gpu_data() : 
+							bottom[1]->gpu_data();
+  
   const Dtype* top_diff = top[0]->gpu_diff();
   Dtype* bottom_diff = bottom[0]->mutable_gpu_diff();
   const int count = bottom[0]->count();
