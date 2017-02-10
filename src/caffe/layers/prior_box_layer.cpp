@@ -202,9 +202,14 @@ void PriorBoxLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   }
   // set the variance.
   top_data += top[0]->offset(0, 1);
-  if (variance_.size() == 1) {
+  if (variance_.size() == 1 && code_type_ != PriorBoxParameter::YOLO) {
     caffe_set<Dtype>(dim, Dtype(variance_[0]), top_data);
   } else {
+    Dtype vars[] = { 0, 0 };
+    if (code_type_ == PriorBoxParameter::YOLO) {
+      vars[0] = variance_[0];
+      vars[1] = variance_.size() == 1 ? variance_[0] : variance_[1];
+    }
     int count = 0;
     for (int h = 0; h < layer_height; ++h) {
       for (int w = 0; w < layer_width; ++w) {
@@ -212,13 +217,12 @@ void PriorBoxLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
           if (code_type_ == PriorBoxParameter::YOLO) {
             top_data[count++] = layer_width;
             top_data[count++] = layer_height;
-            top_data[count++] = variance_[2];
-            top_data[count++] = variance_[3];
+            top_data[count++] = vars[0];
+            top_data[count++] = vars[1];
           }
           else {
             for (int j = 0; j < 4; ++j) {
-              top_data[count] = variance_[j];
-              ++count;
+              top_data[count++] = variance_[j];
             }
           }
         }

@@ -871,7 +871,7 @@ def CreateMultiBoxHead(net, data_layer="data", num_classes=[], from_layers=[],
         use_scale=True, min_sizes=[], max_sizes=[], prior_variance = [0.1],
         aspect_ratios=[], steps=[], img_height=0, img_width=0, share_location=True,
         flip=True, clip=True, offset=0.5, inter_layer_depth=[], kernel_size=1, pad=0,
-        conf_postfix='', loc_postfix='', **bn_param):
+        conf_postfix='', loc_postfix='', code_type=None, **bn_param):
     assert num_classes, "must provide num_classes"
     assert num_classes > 0, "num_classes must be positive number"
     if normalizations:
@@ -964,8 +964,13 @@ def CreateMultiBoxHead(net, data_layer="data", num_classes=[], from_layers=[],
 
         # Create prior generation layer.
         name = "{}_mbox_priorbox".format(from_layer)
-        net[name] = L.PriorBox(net[from_layer], net[data_layer], min_size=min_size,
-                clip=clip, variance=prior_variance, offset=offset)
+        if code_type is None:
+            net[name] = L.PriorBox(net[from_layer], net[data_layer], min_size=min_size,
+                                   clip=clip, variance=prior_variance, offset=offset)		
+        else:
+            net[name] = L.PriorBox(net[from_layer], net[data_layer], min_size=min_size,
+                                   clip=clip, variance=prior_variance, offset=offset, 
+                                   code_type=code_type)	
         if max_size:
             net.update(name, {'max_size': max_size})
         if aspect_ratio:

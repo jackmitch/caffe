@@ -535,14 +535,11 @@ mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source
         use_batchnorm=use_batchnorm, min_sizes=min_sizes, max_sizes=max_sizes,
         aspect_ratios=aspect_ratios, normalizations=normalizations,
         num_classes=num_classes, share_location=share_location, flip=flip, clip=clip,
-        prior_variance=prior_variance, kernel_size=3, pad=1)
+        prior_variance=prior_variance, kernel_size=3, pad=1, code_type=code_type)
 
 # Create the MultiBoxLossLayer.
 name = "mbox_loss"
 mbox_layers.append(net.label)
-
-if code_type == P.PriorBox.YOLO:
-  mbox_layers.append('data')
   
 net[name] = L.MultiBoxLoss(*mbox_layers, multibox_loss_param=multibox_loss_param,
         loss_param=loss_param, include=dict(phase=caffe_pb2.Phase.Value('TRAIN')),
@@ -573,7 +570,7 @@ mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source
         use_batchnorm=use_batchnorm, min_sizes=min_sizes, max_sizes=max_sizes,
         aspect_ratios=aspect_ratios, normalizations=normalizations,
         num_classes=num_classes, share_location=share_location, flip=flip, clip=clip,
-        prior_variance=prior_variance, kernel_size=3, pad=1)
+        prior_variance=prior_variance, kernel_size=3, pad=1, code_type=code_type)
 
 conf_name = "mbox_conf"
 if multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.SOFTMAX:
@@ -588,9 +585,6 @@ elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
   sigmoid_name = "{}_sigmoid".format(conf_name)
   net[sigmoid_name] = L.Sigmoid(net[conf_name])
   mbox_layers[1] = net[sigmoid_name]
-
-if code_type == P.PriorBox.YOLO:
-  mbox_layers.append('data')
   
 net.detection_out = L.DetectionOutput(*mbox_layers,
     detection_output_param=det_out_param,

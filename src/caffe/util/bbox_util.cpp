@@ -462,9 +462,22 @@ void EncodeBBox(
     float bbox_center_y = (bbox.ymin() + bbox.ymax()) / 2.;
 
     // HACK: to use prior_variance to represent the feature map size the priror boxes were laid onto
-    // YOLO boxes limit the offset boxes can move by. Limit to one feature map square
-    encode_bbox->set_xmin(log((1. / ((bbox_center_x - prior_center_x)*prior_variance[0])) - 1.));
-    encode_bbox->set_ymin(log((1. / ((bbox_center_y - prior_center_y)*prior_variance[1])) - 1.));
+    // YOLO boxes limit the offset boxes can move by a positive offset of max a grid square.
+    //    bx = logistic_activation(tx) + prior_centre_x
+    //      0 < logistic_activation(tx) < 1
+    //  If the box_centre_x is actually less than the prior_centre_x we best offset we can do is 0.
+    //  See photo - YOLO_box_implementation_in_SSD.jpg
+
+    encode_bbox->set_xmin(-1. * log((1. / ((bbox_center_x - prior_center_x)*prior_variance[0])) - 1.));
+    encode_bbox->set_ymin(-1. * log((1. / ((bbox_center_y - prior_center_y)*prior_variance[1])) - 1.));
+    
+    // if our offset is negative to ground truth, the best we can do is set tx to zero
+    if (std::isnan(encode_bbox->xmin())) {
+      encode_bbox->set_xmin(0);
+    }
+    if (std::isnan(encode_bbox->ymin())) {
+      encode_bbox->set_ymin(0);
+    }
 
     if (encode_variance_in_target) {
       encode_bbox->set_xmax(log(bbox_width / prior_width));
