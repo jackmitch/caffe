@@ -34,15 +34,16 @@ for row in csvrows:
         annofile = open(annofilename, 'w')
         annofile.write('<annotation>\n')
         annofile.write('\t<object>\n')
-        annofile.write('\t\t<name>face</name>\n')
         for box in boxes:
+            annofile.write('\t\t<name>face</name>\n')
             annofile.write('\t\t\t<bndbox>\n')
             annofile.write('\t\t\t\t<xmin>%d</xmin>\n' % int(round(box['left'])))
             annofile.write('\t\t\t\t<xmax>%d</xmax>\n' % int(round(box['left'] + box['width'])))
             annofile.write('\t\t\t\t<ymin>%d</ymin>\n' % int(round(box['top'])))
             annofile.write('\t\t\t\t<ymax>%d</ymax>\n' % int(round(box['top'] + box['height'])))
             annofile.write('\t\t\t</bndbox>\n')
-        annofile.write('\t</object>\n')
+        
+		annofile.write('\t</object>\n')
         annofile.write('</annotation>\n')
         annofile.close()
         boxes = []
