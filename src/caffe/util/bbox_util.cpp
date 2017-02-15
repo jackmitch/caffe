@@ -705,7 +705,8 @@ void MatchBBox(const vector<NormalizedBBox>& gt_bboxes,
   if (num_gt == 0) {
     return;
   }
-
+#define JAL_MATCH_IMPLETEMENTION 1
+#ifndef JAL_MATCH_IMPLETEMENTION
   // Store the positive overlap between predictions and ground truth.
   map<int, map<int, float> > overlaps;
   for (int i = 0; i < num_pred; ++i) {
@@ -766,6 +767,46 @@ void MatchBBox(const vector<NormalizedBBox>& gt_bboxes,
       gt_pool.erase(std::find(gt_pool.begin(), gt_pool.end(), max_gt_idx));
     }
   }
+#else 
+  // Store the positive overlap between predictions and ground truth.
+  map<int, map<int, float> > overlaps;
+  std::multimap<float, pair<int, int> > best_gt_overlap;
+
+  for (int i = 0; i < num_pred; ++i) {
+    if (ignore_cross_boundary_bbox && IsCrossBoundaryBBox(pred_bboxes[i])) {
+      (*match_indices)[i] = -2;
+      continue;
+    }
+    for (int j = 0; j < num_gt; ++j) {
+      float overlap = JaccardOverlap(pred_bboxes[i], gt_bboxes[gt_indices[j]]);
+      if (overlap > 1e-6) {
+        (*match_overlaps)[i] = std::max((*match_overlaps)[i], overlap);
+        overlaps[i][j] = overlap;
+        best_gt_overlap.insert(std::make_pair(overlap, std::make_pair(i, j)));
+      }
+    }
+  }
+
+  // action the best overlap for each ground truth
+  vector<bool> gt_used(num_gt, false);
+  int count = 0;
+  std::multimap<float, pair<int, int> >::reverse_iterator it = best_gt_overlap.rbegin();
+  for (; it != best_gt_overlap.rend(); it++) {
+    int i = it->second.first;
+    int j = it->second.second;
+
+    // check gt and pred have not already been used
+    if (!gt_used[j] && (*match_indices)[i] == -1) {
+      (*match_indices)[i] = gt_indices[j];
+      (*match_overlaps)[i] = it->first;
+      gt_used[j] = true;
+      ++count;
+      if (count == num_gt) {
+        break;
+      }
+    }
+  }
+#endif
 
   switch (match_type) {
     case MultiBoxLossParameter_MatchType_BIPARTITE:
