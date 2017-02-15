@@ -468,15 +468,36 @@ void EncodeBBox(
     //  If the box_centre_x is actually less than the prior_centre_x we best offset we can do is 0.
     //  See photo - YOLO_box_implementation_in_SSD.jpg
 
-    encode_bbox->set_xmin(-1. * log((1. / ((bbox_center_x - prior_center_x)*prior_variance[0])) - 1.));
-    encode_bbox->set_ymin(-1. * log((1. / ((bbox_center_y - prior_center_y)*prior_variance[1])) - 1.));
-    
-    // if our offset is negative to ground truth, the best we can do is set tx to zero
-    if (std::isnan(encode_bbox->xmin())) {
-      encode_bbox->set_xmin(0);
+    // if our offset is negative to ground truth, the best we can do is set tx to a largeish neg number 
+    // such that 1 / (1 + e^-x) is near zero (i.e. offset from prior box is zero)
+    const float limit = 5.f;
+    float dx = bbox_center_x - prior_center_x;
+    if (dx < 0.001f) {
+      encode_bbox->set_xmin(-limit);
     }
-    if (std::isnan(encode_bbox->ymin())) {
-      encode_bbox->set_ymin(0);
+    else {
+      encode_bbox->set_xmin(-1. * log((1. / (dx*prior_variance[0])) - 1.));
+    }
+
+    float dy = bbox_center_y - prior_center_y;
+    if (dy < 0.001f) {
+      encode_bbox->set_ymin(-limit);
+    }
+    else {
+      encode_bbox->set_ymin(-1. * log((1. / (dy*prior_variance[1])) - 1.));
+    }
+
+    if (encode_bbox->xmin() > limit) {
+      encode_bbox->set_xmin(limit);
+    }
+    if (encode_bbox->ymin() > limit) {
+      encode_bbox->set_ymin(limit);
+    }
+    if (encode_bbox->xmin() < -limit || std::isnan(encode_bbox->xmin())) {
+      encode_bbox->set_xmin(-limit);
+    }
+    if (encode_bbox->ymin() < -limit || std::isnan(encode_bbox->ymin())) {
+      encode_bbox->set_ymin(-limit);
     }
 
     if (encode_variance_in_target) {
