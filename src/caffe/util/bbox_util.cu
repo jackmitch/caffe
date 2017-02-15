@@ -199,7 +199,7 @@ __global__ void DecodeBBoxesKernel(const int nthreads,
       Dtype decode_bbox_center_x, decode_bbox_center_y;
       Dtype decode_bbox_width, decode_bbox_height;
 	  
-	  decode_bbox_center_x = prior_center_x + (1. / (1. + exp(-xmin))) / prior_data[vi];
+      decode_bbox_center_x = prior_center_x + (1. / (1. + exp(-xmin))) / prior_data[vi];
       decode_bbox_center_y = prior_center_y + (1. / (1. + exp(-ymin))) / prior_data[vi + 1];
 	
       if (variance_encoded_in_target) {

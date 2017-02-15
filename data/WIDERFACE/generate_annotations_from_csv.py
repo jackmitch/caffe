@@ -43,7 +43,7 @@ for row in csvrows:
             annofile.write('\t\t\t\t<ymax>%d</ymax>\n' % int(round(box['top'] + box['height'])))
             annofile.write('\t\t\t</bndbox>\n')
         
-		annofile.write('\t</object>\n')
+        annofile.write('\t</object>\n')
         annofile.write('</annotation>\n')
         annofile.close()
         boxes = []
