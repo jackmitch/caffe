@@ -39,8 +39,18 @@ void Blob<Dtype>::Reshape(const vector<int>& shape) {
   }
   if (count_ > capacity_) {
     capacity_ = count_;
-    data_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
-    diff_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
+    if (data_) {
+      data_->resize(capacity_ * sizeof(Dtype));
+    }
+    else {
+      data_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
+    }
+    if (diff_) {
+      diff_->resize(capacity_ * sizeof(Dtype));
+    }
+    else {
+      diff_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
+    }
   }
 }
 
@@ -141,9 +151,19 @@ void Blob<Dtype>::ShareData(const Blob& other) {
 }
 
 template <typename Dtype>
+void Blob<Dtype>::ShareData(shared_ptr<SyncedMemory>& storage) {
+  data_ = storage;
+}
+
+template <typename Dtype>
 void Blob<Dtype>::ShareDiff(const Blob& other) {
   CHECK_EQ(count_, other.count());
   diff_ = other.diff();
+}
+
+template <typename Dtype>
+void Blob<Dtype>::ShareDiff(shared_ptr<SyncedMemory>& storage) {
+  diff_ = storage;
 }
 
 // The "update" method is used for parameter blobs in a Net, which are stored

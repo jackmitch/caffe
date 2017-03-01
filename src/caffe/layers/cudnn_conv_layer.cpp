@@ -14,6 +14,16 @@ namespace caffe {
 /**
  * TODO(dox) explain cuDNN interface
  */
+
+#ifdef FEED_FORWARD_ONLY
+template <typename Dtype>
+size_t CuDNNConvolutionLayer<Dtype>::workspaceSizeInBytes = 0;
+template <typename Dtype>
+void* CuDNNConvolutionLayer<Dtype>::workspaceData = NULL;
+template <typename Dtype>
+void** CuDNNConvolutionLayer<Dtype>::workspace = new void*[CUDNN_STREAMS_PER_GROUP];
+#endif
+
 template <typename Dtype>
 void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
@@ -38,9 +48,13 @@ void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
   workspace_bwd_data_sizes_ = new size_t[bottom.size()];
 
   // workspace data
+#ifndef FEED_FORWARD_ONLY
   workspaceSizeInBytes = 0;
   workspaceData = NULL;
   workspace = new void*[this->group_ * CUDNN_STREAMS_PER_GROUP];
+#else
+  CHECK_EQ(this->group_, 1);
+#endif
 
   for (size_t i = 0; i < bottom.size(); ++i) {
     // initialize all to default algorithms
@@ -156,6 +170,7 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
           CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
           workspace_limit_bytes, &bwd_filter_algo_[i]) );
 
+#ifndef FEED_FORWARD_ONLY
     // get workspace for backwards filter algorithm
     CUDNN_CHECK(cudnnGetConvolutionBackwardFilterWorkspaceSize(handle_[0],
           bottom_descs_[i], top_descs_[i], conv_descs_[i], filter_desc_,
@@ -171,6 +186,7 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
     CUDNN_CHECK(cudnnGetConvolutionBackwardDataWorkspaceSize(handle_[0],
           filter_desc_, top_descs_[i], conv_descs_[i], bottom_descs_[i],
           bwd_data_algo_[i], &workspace_bwd_data_sizes_[i]) );
+#endif
   }
 
   // reduce over all workspace sizes to get a maximum to allocate / reallocate
@@ -181,10 +197,12 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
   for (size_t i = 0; i < bottom.size(); i++) {
     total_workspace_fwd        = std::max(total_workspace_fwd,
                                      workspace_fwd_sizes_[i]);
+#ifndef FEED_FORWARD_ONLY
     total_workspace_bwd_data   = std::max(total_workspace_bwd_data,
                                      workspace_bwd_data_sizes_[i]);
     total_workspace_bwd_filter = std::max(total_workspace_bwd_filter,
                                      workspace_bwd_filter_sizes_[i]);
+#endif
   }
   // get max over all operations
   size_t max_workspace = std::max(total_workspace_fwd,
@@ -257,7 +275,11 @@ void CuDNNConvolutionLayer<Dtype>::CleanUp() {
     cudnnDestroy(handle_[g]);
   }
 
-  cudaFree(workspaceData);
+  if(workspaceData) {
+    cudaFree(workspaceData);
+    workspaceData = NULL;
+  }
+
   delete[] stream_;
   delete[] handle_;
   delete[] fwd_algo_;

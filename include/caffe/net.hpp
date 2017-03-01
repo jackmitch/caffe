@@ -20,8 +20,13 @@ namespace caffe {
  *
  * TODO(dox): more thorough description.
  */
+
+template <typename Dtype> class NetMemoryOptimiser;
+
 template <typename Dtype>
 class Net {
+ friend class NetMemoryOptimiser<Dtype>;
+
  public:
   explicit Net(const NetParameter& param, const Net* root_net = NULL);
   explicit Net(const string& param_file, Phase phase,
@@ -318,6 +323,7 @@ class Net {
   bool debug_info_;
   /// The root net that actually holds the shared layers in data parallelism
   const Net* const root_net_;
+
   DISABLE_COPY_AND_ASSIGN(Net);
 };
 

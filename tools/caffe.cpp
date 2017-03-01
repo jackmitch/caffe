@@ -489,8 +489,8 @@ int ssdtest() {
     // ensure image is below max_im_size_
     float sf = 1.0;
     float detection_threshold = 0.15f;
-    int max_im_size = 2048;
-    bool do_patches = true;
+    int max_im_size = 700;
+    bool do_patches = false;
     int overlap = 50;
 
     boost::shared_ptr<caffe::MemoryDataLayer<float> > memory_layer =

@@ -59,6 +59,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ristretto", "ristretto\rist
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "ssd_face", "..\examples\ssd\ssd_face.pyproj", "{3D155A98-19CA-483D-B84D-9AFA026AE11C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "convert_annoset", "convert_annoset\convert_annoset.vcxproj", "{44AAEF8E-2DF2-4534-AD6C-50017997837B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -171,6 +173,16 @@ Global
 		{3D155A98-19CA-483D-B84D-9AFA026AE11C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D155A98-19CA-483D-B84D-9AFA026AE11C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{3D155A98-19CA-483D-B84D-9AFA026AE11C}.Release|x64.ActiveCfg = Release|Any CPU
+		{44AAEF8E-2DF2-4534-AD6C-50017997837B}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{44AAEF8E-2DF2-4534-AD6C-50017997837B}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{44AAEF8E-2DF2-4534-AD6C-50017997837B}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{44AAEF8E-2DF2-4534-AD6C-50017997837B}.Debug|x64.ActiveCfg = Debug|x64
+		{44AAEF8E-2DF2-4534-AD6C-50017997837B}.Debug|x64.Build.0 = Debug|x64
+		{44AAEF8E-2DF2-4534-AD6C-50017997837B}.Release|Any CPU.ActiveCfg = Release|x64
+		{44AAEF8E-2DF2-4534-AD6C-50017997837B}.Release|Mixed Platforms.ActiveCfg = Release|x64
+		{44AAEF8E-2DF2-4534-AD6C-50017997837B}.Release|Mixed Platforms.Build.0 = Release|x64
+		{44AAEF8E-2DF2-4534-AD6C-50017997837B}.Release|x64.ActiveCfg = Release|x64
+		{44AAEF8E-2DF2-4534-AD6C-50017997837B}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

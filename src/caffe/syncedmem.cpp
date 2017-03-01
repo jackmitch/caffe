@@ -18,6 +18,7 @@ SyncedMemory::~SyncedMemory() {
     }
     CUDA_CHECK(cudaFree(gpu_ptr_));
     cudaSetDevice(initial_device);
+    gpu_ptr_ = NULL;
   }
 #endif  // CPU_ONLY
 }
@@ -152,6 +153,34 @@ void SyncedMemory::async_gpu_push(const cudaStream_t& stream) {
   head_ = SYNCED;
 }
 #endif
+
+void SyncedMemory::resize(size_t new_size) {
+  if (new_size <= size_){
+    // do nothing if the new size requirement is already fulfilled
+    return;
+  }
+  else{
+    // we need to enlarge the underlying memory
+    // For this we just discard currently allocated memory blocks and set the new size
+    size_ = new_size;
+    head_ = UNINITIALIZED;
+
+    if (cpu_ptr_ && own_cpu_data_) {
+      CaffeFreeHost(cpu_ptr_, cpu_malloc_use_cuda_);
+    }
+    cpu_ptr_ = NULL;
+
+#ifndef CPU_ONLY
+    if (gpu_ptr_) {
+      CUDA_CHECK(cudaFree(gpu_ptr_));
+    }
+    gpu_ptr_ = NULL;
+#endif  // CPU_ONLY
+
+    own_cpu_data_ = false;
+
+  }
+}
 
 }  // namespace caffe
 

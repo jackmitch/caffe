@@ -5,6 +5,7 @@
         <BuildDir>$(SolutionDir)..\Build</BuildDir>
         <!--NOTE: CpuOnlyBuild and UseCuDNN flags can't be set at the same time.-->
         <CpuOnlyBuild>false</CpuOnlyBuild>
+        <FeedForwardOnly>false</FeedForwardOnly>
         <UseCuDNN>true</UseCuDNN>
         <CudaVersion>7.5</CudaVersion>
         <!-- NOTE: If Python support is enabled, PythonDir (below) needs to be
@@ -57,6 +58,11 @@
     <ItemDefinitionGroup Condition="'$(CpuOnlyBuild)'=='true'">
         <ClCompile>
             <PreprocessorDefinitions>CPU_ONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+        </ClCompile>
+    </ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(FeedForwardOnly)'=='true'">
+        <ClCompile>
+            <PreprocessorDefinitions>FEED_FORWARD_ONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
         </ClCompile>
     </ItemDefinitionGroup>
     <ItemDefinitionGroup Condition="'$(UseCuDNN)'=='true'">

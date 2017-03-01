@@ -8,6 +8,14 @@
 
 namespace caffe {
 
+#ifdef FEED_FORWARD_ONLY
+template <typename Dtype>
+Blob<Dtype> BaseConvolutionLayer<Dtype>::col_buffer_;
+
+template <typename Dtype>
+Blob<Dtype> BaseConvolutionLayer<Dtype>::bias_multiplier_;
+#endif
+
 template <typename Dtype>
 void BaseConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {

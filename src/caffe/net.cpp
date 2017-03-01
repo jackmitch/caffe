@@ -18,6 +18,7 @@
 #include "caffe/util/insert_splits.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/upgrade_proto.hpp"
+#include "caffe/net_memory_optimiser.hpp"
 
 #include "caffe/test/test_caffe_main.hpp"
 
@@ -284,6 +285,12 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   ShareWeights();
   debug_info_ = param.debug_info();
   LOG_IF(INFO, Caffe::root_solver()) << "Network initialization done.";
+
+#ifdef FEED_FORWARD_ONLY
+  // optimize memory
+  NetMemoryOptimiser<Dtype> optimiser(*this);
+  optimiser.optimise();
+#endif
 }
 
 template <typename Dtype>
