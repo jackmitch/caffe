@@ -557,8 +557,7 @@ message LayerParameter {
   optional TileParameter tile_param = 138;
   optional VideoDataParameter video_data_param = 207;
   optional WindowDataParameter window_data_param = 129;
-
-  optional NNPACKConvolutionParameter nnpack_convolution_param = 204;
+  optional NNPACKConvolutionParameter nnpack_convolution_param = 208;
 }
 
 // Message that stores parameters used to apply transformation
