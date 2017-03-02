@@ -355,6 +355,7 @@ ifeq ($(USE_NNPACK), 1)
 	INCLUDE_DIRS += $(NNPACK_INCLUDE)
 	INCLUDE_DIRS += $(NNPACK_INCLUDE)/../third-party/pthreadpool/include
 	LIBRARY_DIRS += $(NNPACK_LIB)
+	LDFLAGS += $(NNPACK_STATIC_LIB)
 endif
 
 # configure IO libraries
