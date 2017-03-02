@@ -463,7 +463,7 @@ int ssdtest() {
     boost::shared_ptr<caffe::MemoryDataLayer<float> > memory_layer =
       boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float> >(caffe_net.layer_by_name("data"));
 
-    if (memory_layer == nullptr) {
+    if (memory_layer == NULL) {
       memory_layer =
         boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float> >(caffe_net.layer_by_name("memory_data_input")); 
     }
