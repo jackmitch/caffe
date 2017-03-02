@@ -33,18 +33,18 @@ nnp_convolution_algorithm nnp_algorithm(NNPACKConvolutionParameter_Algorithm alg
   return algorithm;
 }
 
-nnp_convolution_kernel_transform_strategy nnp_kts(
+nnp_convolution_transform_strategy nnp_kts(
     NNPACKConvolutionParameter_KernelTransformStrategy kts) {
   auto kernel_transform_strategy =
-      nnp_convolution_kernel_transform_strategy_reuse;
+     nnp_convolution_transform_strategy_tuple_based;
   switch (kts) {
     case NNPACKConvolutionParameter_KernelTransformStrategy_RECOMPUTE:
       kernel_transform_strategy =
-          nnp_convolution_kernel_transform_strategy_recompute;
+          nnp_convolution_transform_strategy_block_based;
       break;
     case NNPACKConvolutionParameter_KernelTransformStrategy_REUSE: {
       kernel_transform_strategy =
-          nnp_convolution_kernel_transform_strategy_reuse;
+          nnp_convolution_transform_strategy_tuple_based;
       break;
     }
   }
@@ -79,6 +79,13 @@ void caffe_nnp_convolution_forward(
   const auto algorithm = nnp_algorithm(algo);
   const auto kernel_transform_strategy = nnp_kts(kts);
 
+  const nnp_size optimise = {
+    .width = 1,
+    .height = 1
+  };
+
+  enum nnp_activation activation = nnp_activation_identity;
+
   if (batch_size == 1) {
     VLOG(1) << "Running inference mode";
     const auto status = nnp_convolution_inference(
@@ -89,10 +96,12 @@ void caffe_nnp_convolution_forward(
         input_size,
         padding,
         kernel_size,
+        optimise,
         bottom.cpu_data(),
         weights.cpu_data(),
         bias.cpu_data(),
         top->mutable_cpu_data(),
+	activation, NULL,
         Caffe::nnpack_threadpool(),
         nullptr);
     CHECK_EQ(nnp_status_success, status);
@@ -110,6 +119,7 @@ void caffe_nnp_convolution_forward(
         weights.cpu_data(),
         bias.cpu_data(),
         top->mutable_cpu_data(),
+	activation, NULL,
         Caffe::nnpack_threadpool(),
         nullptr);
     CHECK_EQ(nnp_status_success, status);
