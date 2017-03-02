@@ -17,8 +17,8 @@ namespace caffe {
 template <typename Dtype>
 class BaseConvolutionLayer : public Layer<Dtype> {
  public:
-  explicit BaseConvolutionLayer(const LayerParameter& param)
-      : Layer<Dtype>(param) {}
+   explicit BaseConvolutionLayer(const LayerParameter& param);
+
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
@@ -134,7 +134,7 @@ class BaseConvolutionLayer : public Layer<Dtype> {
           dilation_.cpu_data()[0], dilation_.cpu_data()[1], col_buff);
     } else {
       im2col_nd_gpu(data, num_spatial_axes_, num_kernels_im2col_,
-          conv_input_shape_.gpu_data(), col_buffer_.gpu_shape(),
+          conv_input_shape_.gpu_data(), col_buffer_->gpu_shape(),
           kernel_shape_.gpu_data(), pad_.gpu_data(),
           stride_.gpu_data(), dilation_.gpu_data(), col_buff);
     }
@@ -149,7 +149,7 @@ class BaseConvolutionLayer : public Layer<Dtype> {
           dilation_.cpu_data()[0], dilation_.cpu_data()[1], data);
     } else {
       col2im_nd_gpu(col_buff, num_spatial_axes_, num_kernels_col2im_,
-          conv_input_shape_.gpu_data(), col_buffer_.gpu_shape(),
+          conv_input_shape_.gpu_data(), col_buffer_->gpu_shape(),
           kernel_shape_.gpu_data(), pad_.gpu_data(), stride_.gpu_data(),
           dilation_.gpu_data(), data);
     }
@@ -165,13 +165,8 @@ class BaseConvolutionLayer : public Layer<Dtype> {
   int col_offset_;
   int output_offset_;
 
-#ifdef FEED_FORWARD_ONLY
-  static Blob<Dtype> col_buffer_;
-  static Blob<Dtype> bias_multiplier_;
-#else
-  Blob<Dtype> col_buffer_;
-  Blob<Dtype> bias_multiplier_;
-#endif
+  shared_ptr<Blob<Dtype> > col_buffer_;
+  shared_ptr<Blob<Dtype> > bias_multiplier_;
 };
 
 }  // namespace caffe

@@ -19,6 +19,25 @@
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/upgrade_proto.hpp"
 #include "caffe/net_memory_optimiser.hpp"
+#ifdef FEED_FORWARD_ONLY
+#include "boost/thread.hpp"
+#include "caffe/shared_conv_blobs.hpp"
+namespace caffe {
+  template <typename Dtype>
+  shared_ptr<Blob<Dtype> > SharedConvBlobs<Dtype>::col_buffer_;
+  template <typename Dtype>
+  shared_ptr<Blob<Dtype> > SharedConvBlobs<Dtype>::bias_multiplier_;
+}
+#ifdef USE_CUDNN
+#include "caffe/shared_cudnn_data.h"
+namespace {
+  template <typename Dtype>
+  size_t SharedCuDNNData<Dtype>::workspaceSizeInBytes = 0;
+  template <typename Dtype>
+  void* SharedCuDNNData<Dtype>::workspaceData = NULL;
+}
+#endif
+#endif
 
 #include "caffe/test/test_caffe_main.hpp"
 
@@ -28,6 +47,16 @@ template <typename Dtype>
 Net<Dtype>::Net(const NetParameter& param, const Net* root_net)
     : root_net_(root_net) {
   Init(param);
+}
+
+template <typename Dtype>
+Net<Dtype>::~Net()
+{
+#ifdef FEED_FORWARD_ONLY
+#ifdef USE_CUDNN
+  SharedCuDNNData<Dtype>::cleanUp(cuDnnWorksapce);
+#endif
+#endif
 }
 
 template <typename Dtype>
@@ -50,6 +79,20 @@ Net<Dtype>::Net(const string& param_file, Phase phase,
 
 template <typename Dtype>
 void Net<Dtype>::Init(const NetParameter& in_param) {
+
+#ifdef FEED_FORWARD_ONLY
+  // Only one net can be create at a time, this is so the
+  // layers can request shared mmeory from SharedConvBlobs etc.
+  // Easiest way to hack it it in.
+  static boost::mutex mutex;
+  boost::mutex::scoped_lock lock(mutex);
+  SharedConvBlobs<Dtype>::assign();
+
+#ifdef USE_CUDNN
+  SharedCuDNNData<Dtype>::restart();
+#endif
+#endif
+
   CHECK(Caffe::root_solver() || root_net_)
       << "root_net_ needs to be set for all non-root solvers";
   // Set phase from the state.
@@ -287,9 +330,13 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   LOG_IF(INFO, Caffe::root_solver()) << "Network initialization done.";
 
 #ifdef FEED_FORWARD_ONLY
+#ifdef USE_CUDNN
+  cuDnnWorksapce = SharedCuDNNData<Dtype>::getConvWorkspaceData();
+#endif
+  SharedConvBlobs<Dtype>::unassign();
   // optimize memory
-  NetMemoryOptimiser<Dtype> optimiser(*this);
-  optimiser.optimise();
+  //NetMemoryOptimiser<Dtype> optimiser(*this);
+  //optimiser.optimise();
 #endif
 }
 

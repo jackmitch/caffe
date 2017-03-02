@@ -15,15 +15,6 @@ namespace caffe {
  * TODO(dox) explain cuDNN interface
  */
 
-#ifdef FEED_FORWARD_ONLY
-template <typename Dtype>
-size_t CuDNNConvolutionLayer<Dtype>::workspaceSizeInBytes = 0;
-template <typename Dtype>
-void* CuDNNConvolutionLayer<Dtype>::workspaceData = NULL;
-template <typename Dtype>
-void** CuDNNConvolutionLayer<Dtype>::workspace = new void*[CUDNN_STREAMS_PER_GROUP];
-#endif
-
 template <typename Dtype>
 void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
@@ -51,10 +42,11 @@ void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
 #ifndef FEED_FORWARD_ONLY
   workspaceSizeInBytes = 0;
   workspaceData = NULL;
-  workspace = new void*[this->group_ * CUDNN_STREAMS_PER_GROUP];
 #else
   CHECK_EQ(this->group_, 1);
 #endif
+
+  workspace = new void*[this->group_ * CUDNN_STREAMS_PER_GROUP];
 
   for (size_t i = 0; i < bottom.size(); ++i) {
     // initialize all to default algorithms
@@ -213,14 +205,24 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
                                (this->group_ * CUDNN_STREAMS_PER_GROUP);
 
   // this is the total amount of storage needed over all groups + streams
+#ifdef FEED_FORWARD_ONLY
+  workspaceSizeInBytes  = SharedCuDNNData<Dtype>::getConvWorkspaceSize();
+  this->workspaceData = SharedCuDNNData<Dtype>::getConvWorkspaceData();
+#endif
+
   if (total_max_workspace > workspaceSizeInBytes) {
     DLOG(INFO) << "Reallocating workspace storage: " << total_max_workspace;
     workspaceSizeInBytes = total_max_workspace;
 
-    // free the existing workspace and allocate a new (larger) one
-    cudaFree(this->workspaceData);
+    #ifdef FEED_FORWARD_ONLY
+      workspaceData = SharedCuDNNData<Dtype>::resizeConvWorkspace(workspaceSizeInBytes);
+      cudaError_t err = (workspaceData == NULL) ? cudaErrorMemoryAllocation : cudaSuccess;
+    #else
+      // free the existing workspace and allocate a new (larger) one
+      cudaFree(this->workspaceData);
+      cudaError_t err = cudaMalloc(&(this->workspaceData), workspaceSizeInBytes);
+    #endif
 
-    cudaError_t err = cudaMalloc(&(this->workspaceData), workspaceSizeInBytes);
     if (err != cudaSuccess) {
       // force zero memory path
       for (int i = 0; i < bottom.size(); i++) {
@@ -240,11 +242,11 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
       workspaceData = NULL;
       workspaceSizeInBytes = 0;
     }
+  }
 
-    // if we succeed in the allocation, set pointer aliases for workspaces
-    for (int g = 0; g < (this->group_ * CUDNN_STREAMS_PER_GROUP); g++) {
-      workspace[g] = reinterpret_cast<char *>(workspaceData) + g*max_workspace;
-    }
+  // JAL moved here so it is always upto date if using FEED_FORWARD_ONLY
+  for (int g = 0; g < (this->group_ * CUDNN_STREAMS_PER_GROUP); g++) {
+    workspace[g] = reinterpret_cast<char *>(workspaceData) + g*max_workspace;
   }
 
   // Tensor descriptor for bias.
@@ -275,10 +277,13 @@ void CuDNNConvolutionLayer<Dtype>::CleanUp() {
     cudnnDestroy(handle_[g]);
   }
 
+
+#ifndef FEED_FORWARD_ONLY
   if(workspaceData) {
     cudaFree(workspaceData);
     workspaceData = NULL;
   }
+#endif
 
   delete[] stream_;
   delete[] handle_;

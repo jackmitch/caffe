@@ -32,7 +32,7 @@ class Net {
   explicit Net(const string& param_file, Phase phase,
       const int level = 0, const vector<string>* stages = NULL,
       const Net* root_net = NULL);
-  virtual ~Net() {}
+  virtual ~Net();
 
   /// @brief Initialize a network with a NetParameter.
   void Init(const NetParameter& param);
@@ -323,6 +323,10 @@ class Net {
   bool debug_info_;
   /// The root net that actually holds the shared layers in data parallelism
   const Net* const root_net_;
+
+#if defined(FEED_FORWARD_ONLY) && defined(USE_CUDNN)
+  void *cuDnnWorksapce;
+#endif
 
   DISABLE_COPY_AND_ASSIGN(Net);
 };

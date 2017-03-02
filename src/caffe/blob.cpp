@@ -45,12 +45,14 @@ void Blob<Dtype>::Reshape(const vector<int>& shape) {
     else {
       data_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
     }
+#ifndef FEED_FORWARD_ONLY
     if (diff_) {
       diff_->resize(capacity_ * sizeof(Dtype));
     }
     else {
       diff_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
     }
+#endif
   }
 }
 
@@ -157,8 +159,10 @@ void Blob<Dtype>::ShareData(shared_ptr<SyncedMemory>& storage) {
 
 template <typename Dtype>
 void Blob<Dtype>::ShareDiff(const Blob& other) {
+#ifndef FEED_FORWARD_ONLY
   CHECK_EQ(count_, other.count());
   diff_ = other.diff();
+#endif
 }
 
 template <typename Dtype>
@@ -176,6 +180,7 @@ template <> void Blob<bool>::Update() { NOT_IMPLEMENTED; }
 template <typename Dtype>
 void Blob<Dtype>::Update() {
   // We will perform update based on where the data is located.
+  CHECK(diff_);
   switch (data_->head()) {
   case SyncedMemory::HEAD_AT_CPU:
     // perform computation on CPU

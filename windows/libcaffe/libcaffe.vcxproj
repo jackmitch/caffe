@@ -290,6 +290,8 @@
     <ClInclude Include="..\..\include\caffe\parallel.hpp" />
     <ClInclude Include="..\..\include\caffe\proto\caffe.pb.h" />
     <ClInclude Include="..\..\include\caffe\sgd_solvers.hpp" />
+    <ClInclude Include="..\..\include\caffe\shared_conv_blobs.hpp" />
+    <ClInclude Include="..\..\include\caffe\shared_cudnn_data.hpp" />
     <ClInclude Include="..\..\include\caffe\solver.hpp" />
     <ClInclude Include="..\..\include\caffe\solver_factory.hpp" />
     <ClInclude Include="..\..\include\caffe\syncedmem.hpp" />
