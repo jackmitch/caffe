@@ -10,13 +10,20 @@ namespace caffe {
 
   public:
 
-    static void restart() {
+    SharedCuDNNData() {
       workspaceData = NULL;
       workspaceSizeInBytes = 0;
     }
 
-    static void* resizeConvWorkspace(size_t size) {
+    inline ~SharedCuDNNData() {
+      if(workspaceData) {
+        cudaFree(workspaceData);
+      }
+    }
+
+    inline void* resizeConvWorkspace(size_t size) {
       cudaFree(workspaceData);
+      workspaceSizeInBytes = size;
       cudaError_t err = cudaMalloc(&workspaceData, workspaceSizeInBytes);
       if(err == cudaSuccess) {
         return workspaceData;
@@ -24,18 +31,19 @@ namespace caffe {
       return NULL;
     }
 
-    static void cleanUp(void *data) {
-      cudaFree(data);
-    }
+    inline size_t getConvWorkspaceSize() { return workspaceSizeInBytes; }
 
-    static size_t getConvWorkspaceSize() const { return workspaceSizeInBytes; }
-
-    static void* getConvWorkspaceData() const { return workspaceData; }
+    inline void* getConvWorkspaceData() { return workspaceData; }
 
   private:
 
-    static size_t workspaceSizeInBytes;  // size of underlying storage
-    static void *workspaceData;
+    size_t workspaceSizeInBytes;  // size of underlying storage
+    void *workspaceData;
+  };
+#else
+  template <typename Dtype>
+  class SharedCuDNNData {
+
   };
 #endif
 }

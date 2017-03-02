@@ -11,6 +11,7 @@
 #include "caffe/common.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
+#include "caffe/shared_cudnn_data.hpp"
 
 namespace caffe {
 
@@ -21,6 +22,8 @@ namespace caffe {
  * TODO(dox): more thorough description.
  */
 
+template <typename Dtype> class SharedCuDNNData;
+template <typename Dtype> class SharedConvBlobs;
 template <typename Dtype> class NetMemoryOptimiser;
 
 template <typename Dtype>
@@ -324,9 +327,8 @@ class Net {
   /// The root net that actually holds the shared layers in data parallelism
   const Net* const root_net_;
 
-#if defined(FEED_FORWARD_ONLY) && defined(USE_CUDNN)
-  void *cuDnnWorksapce;
-#endif
+  shared_ptr<SharedCuDNNData<Dtype> > cuDnnWorkspace_;
+  shared_ptr<SharedConvBlobs<Dtype> > sharedConvBlobs_;
 
   DISABLE_COPY_AND_ASSIGN(Net);
 };

@@ -8,6 +8,10 @@
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/util/im2col.hpp"
 
+#ifdef FEED_FORWARD_ONLY
+#include "caffe/shared_conv_blobs.hpp"
+#endif
+
 namespace caffe {
 
 /**
@@ -27,6 +31,10 @@ class BaseConvolutionLayer : public Layer<Dtype> {
   virtual inline int MinBottomBlobs() const { return 1; }
   virtual inline int MinTopBlobs() const { return 1; }
   virtual inline bool EqualNumBottomTopBlobs() const { return true; }
+
+#ifdef FEED_FORWARD_ONLY
+  void setSharedBlobs(shared_ptr<SharedConvBlobs<Dtype> > shared_blobs);
+#endif
 
  protected:
   // Helper functions that abstract away the column buffer and gemm arguments.
@@ -167,6 +175,11 @@ class BaseConvolutionLayer : public Layer<Dtype> {
 
   shared_ptr<Blob<Dtype> > col_buffer_;
   shared_ptr<Blob<Dtype> > bias_multiplier_;
+
+#ifdef FEED_FORWARD_ONLY
+  shared_ptr<SharedConvBlobs<Dtype> > shared_blobs_;
+#endif
+
 };
 
 }  // namespace caffe

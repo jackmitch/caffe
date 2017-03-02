@@ -22,20 +22,10 @@
 #ifdef FEED_FORWARD_ONLY
 #include "boost/thread.hpp"
 #include "caffe/shared_conv_blobs.hpp"
-namespace caffe {
-  template <typename Dtype>
-  shared_ptr<Blob<Dtype> > SharedConvBlobs<Dtype>::col_buffer_;
-  template <typename Dtype>
-  shared_ptr<Blob<Dtype> > SharedConvBlobs<Dtype>::bias_multiplier_;
-}
+#include "caffe/layers/base_conv_layer.hpp"
 #ifdef USE_CUDNN
-#include "caffe/shared_cudnn_data.h"
-namespace {
-  template <typename Dtype>
-  size_t SharedCuDNNData<Dtype>::workspaceSizeInBytes = 0;
-  template <typename Dtype>
-  void* SharedCuDNNData<Dtype>::workspaceData = NULL;
-}
+#include "caffe/shared_cudnn_data.hpp"
+#include "caffe/layers/cudnn_conv_layer.hpp"
 #endif
 #endif
 
@@ -50,13 +40,8 @@ Net<Dtype>::Net(const NetParameter& param, const Net* root_net)
 }
 
 template <typename Dtype>
-Net<Dtype>::~Net()
-{
-#ifdef FEED_FORWARD_ONLY
-#ifdef USE_CUDNN
-  SharedCuDNNData<Dtype>::cleanUp(cuDnnWorksapce);
-#endif
-#endif
+Net<Dtype>::~Net() {
+
 }
 
 template <typename Dtype>
@@ -79,19 +64,6 @@ Net<Dtype>::Net(const string& param_file, Phase phase,
 
 template <typename Dtype>
 void Net<Dtype>::Init(const NetParameter& in_param) {
-
-#ifdef FEED_FORWARD_ONLY
-  // Only one net can be create at a time, this is so the
-  // layers can request shared mmeory from SharedConvBlobs etc.
-  // Easiest way to hack it it in.
-  static boost::mutex mutex;
-  boost::mutex::scoped_lock lock(mutex);
-  SharedConvBlobs<Dtype>::assign();
-
-#ifdef USE_CUDNN
-  SharedCuDNNData<Dtype>::restart();
-#endif
-#endif
 
   CHECK(Caffe::root_solver() || root_net_)
       << "root_net_ needs to be set for all non-root solvers";
@@ -331,12 +303,28 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
 
 #ifdef FEED_FORWARD_ONLY
 #ifdef USE_CUDNN
-  cuDnnWorksapce = SharedCuDNNData<Dtype>::getConvWorkspaceData();
+  cuDnnWorkspace_.reset(new SharedCuDNNData<Dtype>());
+  // set on all cudnn_conv layers
+  for (int i = 0; i < layers_.size(); i++) {
+    CuDNNConvolutionLayer<Dtype> *cl = dynamic_cast<CuDNNConvolutionLayer<Dtype>*>(layers_[i].get());
+    if(cl) {
+      cl->setSharedWorkspace(cuDnnWorkspace_);
+    }
+  }
 #endif
-  SharedConvBlobs<Dtype>::unassign();
+  sharedConvBlobs_.reset(new SharedConvBlobs<Dtype>());
+  for (int i = 0; i < layers_.size(); i++) {
+    BaseConvolutionLayer<Dtype> *cl = dynamic_cast<BaseConvolutionLayer<Dtype>*>(layers_[i].get());
+    if (cl) {
+      cl->setSharedBlobs(sharedConvBlobs_);
+    }
+  }
   // optimize memory
-  //NetMemoryOptimiser<Dtype> optimiser(*this);
-  //optimiser.optimise();
+  if (in_param.has_memory_optimisation_params())
+  {
+    NetMemoryOptimiser<Dtype> optimiser(*this, in_param.memory_optimisation_params());
+    optimiser.optimise();
+  }
 #endif
 }
 

@@ -201,6 +201,9 @@ message NetParameter {
   // Net::Backward, and Net::Update.
   optional bool debug_info = 7 [default = false];
 
+  // Configure memory optimisation performed on the net
+  optional MemoryOptimisationParams memory_optimisation_params = 9;
+  
   // The layers that make up the net.  Each of their configurations, including
   // connectivity and behavior, is specified as a LayerParameter.
   repeated LayerParameter layer = 100;  // ID 100 so layers are printed last.
@@ -407,6 +410,14 @@ message NetStateRule {
   // (Use multiple NetStateRules to specify conjunctions of stages.)
   repeated string stage = 4;
   repeated string not_stage = 5;
+}
+
+message MemoryOptimisationParams {
+  // perform memory optimisation or not
+  required bool optimise = 1 [default = false];
+  // not not optimise these blobs, you might not want to optimise blobs which are inputs/outputs
+  // to layers which do not have GPU implementations if thes rest do and running in GPU mode
+  repeated string excluded_layer = 2;
 }
 
 // Specifies training parameters (multipliers on global learning constants,

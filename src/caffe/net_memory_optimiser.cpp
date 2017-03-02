@@ -61,9 +61,10 @@ void NetMemoryOptimiser<Dtype>::SyncedMemoryPool::give(int idx)
 }
 
 template <typename Dtype>
-NetMemoryOptimiser<Dtype>::NetMemoryOptimiser(Net<Dtype>& net)
+NetMemoryOptimiser<Dtype>::NetMemoryOptimiser(Net<Dtype>& net, const MemoryOptimisationParams& params)
   :
-net_(net)
+net_(net),
+params_(params)
 {
 
 }
@@ -135,6 +136,22 @@ template <typename Dtype>
 void NetMemoryOptimiser<Dtype>::buildExcludeList_()
 {
   excluded_blobs_.clear();
+
+  // exclude all blobs specified in the params
+  for (int i = 0; i < params_.excluded_layer_size(); ++i) {
+    for (int j = 0; j < net_.layers_.size(); ++j) {
+      if (net_.layers_[j]->layer_param().name() == params_.excluded_layer(i))
+      {
+        // ignore all top and bottom layers
+        for (int t = 0; t < net_.top_vecs_[j].size(); ++t) {
+          excludeBlob(net_.blob_names_[net_.top_id_vecs_[j][t]]);
+        }
+        for (int b = 0; b < net_.top_vecs_[j].size(); ++b) {
+          excludeBlob(net_.blob_names_[net_.bottom_id_vecs_[j][b]]);
+        }
+      }
+    }
+  }
 
   // Exclude input layers as they might be preloaded by different threads
   for (int i = 0; i < net_.net_input_blob_indices_.size(); ++i) {
@@ -241,19 +258,21 @@ void NetMemoryOptimiser<Dtype>::assignMemory_() {
 template <typename Dtype>
 void NetMemoryOptimiser<Dtype>::optimise() {
 
-  CHECK_EQ(net_.phase(), TEST);
+  if (params_.optimise()) {
+    CHECK_EQ(net_.phase(), TEST);
 
-  // build a map of which blobs are shared with other blobs in the net
-  buildShareMap_();
+    // build a map of which blobs are shared with other blobs in the net
+    buildShareMap_();
 
-  // exclude some blobs from sharing
-  buildExcludeList_();
+    // exclude some blobs from sharing
+    buildExcludeList_();
 
-  // build the memory pool required to serve the blobs
-  buildSyncedMemPool_();
+    // build the memory pool required to serve the blobs
+    buildSyncedMemPool_();
 
-  // assign the shared memory to the blobs
-  assignMemory_();
+    // assign the shared memory to the blobs
+    assignMemory_();
+  }
 }
 
 INSTANTIATE_CLASS(NetMemoryOptimiser);

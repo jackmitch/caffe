@@ -30,7 +30,7 @@ class NetMemoryOptimiser {
   };
 
 public:
-  NetMemoryOptimiser(Net<Dtype>& net);
+  NetMemoryOptimiser(Net<Dtype>& net, const MemoryOptimisationParams& params);
 
   void optimise();
 
@@ -48,6 +48,7 @@ private:
 // atrributes
 private:
   Net<Dtype>& net_;
+  MemoryOptimisationParams params_;
 
   uint64_t raw_byte_count_;
   uint64_t optimised_byte_count_;

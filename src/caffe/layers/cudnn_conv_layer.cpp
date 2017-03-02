@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "caffe/layers/cudnn_conv_layer.hpp"
+#include "caffe/shared_cudnn_data.hpp"
 
 namespace caffe {
 
@@ -39,13 +40,11 @@ void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
   workspace_bwd_data_sizes_ = new size_t[bottom.size()];
 
   // workspace data
-#ifndef FEED_FORWARD_ONLY
-  workspaceSizeInBytes = 0;
-  workspaceData = NULL;
-#else
+#ifdef FEED_FORWARD_ONLY
   CHECK_EQ(this->group_, 1);
 #endif
-
+  workspaceSizeInBytes = 0;
+  workspaceData = NULL;
   workspace = new void*[this->group_ * CUDNN_STREAMS_PER_GROUP];
 
   for (size_t i = 0; i < bottom.size(); ++i) {
@@ -97,6 +96,18 @@ void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
 
   handles_setup_ = true;
 }
+
+#ifdef FEED_FORWARD_ONLY
+template <typename Dtype>
+void CuDNNConvolutionLayer<Dtype>::setSharedWorkspace(shared_ptr<SharedCuDNNData<Dtype> > workspace) 
+{
+  shared_workspace_ = workspace;
+  if(workspaceData) {
+    cudaFree(workspaceData);
+    workspaceSizeInBytes = 0;
+  }
+}
+#endif
 
 template <typename Dtype>
 void CuDNNConvolutionLayer<Dtype>::Reshape(
@@ -206,8 +217,10 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
 
   // this is the total amount of storage needed over all groups + streams
 #ifdef FEED_FORWARD_ONLY
-  workspaceSizeInBytes  = SharedCuDNNData<Dtype>::getConvWorkspaceSize();
-  this->workspaceData = SharedCuDNNData<Dtype>::getConvWorkspaceData();
+  if(shared_workspace_) {
+    workspaceSizeInBytes  = shared_workspace_->getConvWorkspaceSize();
+    this->workspaceData = shared_workspace_->getConvWorkspaceData();
+  }
 #endif
 
   if (total_max_workspace > workspaceSizeInBytes) {
@@ -215,8 +228,15 @@ void CuDNNConvolutionLayer<Dtype>::Reshape(
     workspaceSizeInBytes = total_max_workspace;
 
     #ifdef FEED_FORWARD_ONLY
-      workspaceData = SharedCuDNNData<Dtype>::resizeConvWorkspace(workspaceSizeInBytes);
-      cudaError_t err = (workspaceData == NULL) ? cudaErrorMemoryAllocation : cudaSuccess;
+      cudaError_t err = cudaSuccess;
+      if(shared_workspace_) {
+        workspaceData = shared_workspace_->resizeConvWorkspace(workspaceSizeInBytes);
+        err = (workspaceData == NULL) ? cudaErrorMemoryAllocation : cudaSuccess;
+      }
+      else {
+        cudaFree(this->workspaceData);
+        err = cudaMalloc(&(this->workspaceData), workspaceSizeInBytes);
+      }
     #else
       // free the existing workspace and allocate a new (larger) one
       cudaFree(this->workspaceData);
@@ -278,7 +298,12 @@ void CuDNNConvolutionLayer<Dtype>::CleanUp() {
   }
 
 
-#ifndef FEED_FORWARD_ONLY
+#ifdef FEED_FORWARD_ONLY
+  if(!shared_workspace_ && workspaceData) {
+    cudaFree(workspaceData);
+    workspaceData = NULL;
+  }
+#else
   if(workspaceData) {
     cudaFree(workspaceData);
     workspaceData = NULL;

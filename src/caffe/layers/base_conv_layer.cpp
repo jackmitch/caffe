@@ -13,15 +13,19 @@ template <typename Dtype>
 BaseConvolutionLayer<Dtype>::BaseConvolutionLayer(const LayerParameter& param)
   : Layer<Dtype>(param) 
 {
-#ifdef FEED_FORWARD_ONLY
-  // get the shared Blob from the blob factory
-  col_buffer_ = SharedConvBlobs<Dtype>::getColBufferBlob();
-  bias_multiplier_ = SharedConvBlobs<Dtype>::getBiasMultiplierBlob();
-#else
   col_buffer_.reset(new Blob<Dtype>());
   bias_multiplier_.reset(new Blob<Dtype>());
-#endif
 }
+
+#ifdef FEED_FORWARD_ONLY
+template <typename Dtype>
+void BaseConvolutionLayer<Dtype>::setSharedBlobs(shared_ptr<SharedConvBlobs<Dtype> > shared_blobs)
+{
+  shared_blobs_ = shared_blobs;
+  col_buffer_ = shared_blobs_->getColBufferBlob();
+  bias_multiplier_ = shared_blobs_->getBiasMultiplierBlob();
+}
+#endif
 
 template <typename Dtype>
 void BaseConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
