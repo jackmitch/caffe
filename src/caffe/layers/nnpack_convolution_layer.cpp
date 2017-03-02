@@ -103,7 +103,7 @@ void caffe_nnp_convolution_forward(
         top->mutable_cpu_data(),
 	activation, NULL,
         Caffe::nnpack_threadpool(),
-        nullptr);
+        NULL);
     CHECK_EQ(nnp_status_success, status);
   } else {
     VLOG(1) << "Running batched mode";
@@ -121,7 +121,7 @@ void caffe_nnp_convolution_forward(
         top->mutable_cpu_data(),
 	activation, NULL,
         Caffe::nnpack_threadpool(),
-        nullptr);
+        NULL);
     CHECK_EQ(nnp_status_success, status);
   }
 }

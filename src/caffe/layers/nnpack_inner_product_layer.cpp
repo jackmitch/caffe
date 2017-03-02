@@ -36,7 +36,7 @@ void NNPackInnerProductLayer<float>::Forward_cpu(
         this->blobs_[0]->cpu_data(),
         top[0]->mutable_cpu_data(),
         Caffe::nnpack_threadpool(),
-        nullptr);
+        NULL);
     CHECK_EQ(status, nnp_status_success);
   }
   if (bias_term_) {
