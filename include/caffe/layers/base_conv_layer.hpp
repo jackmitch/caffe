@@ -179,7 +179,8 @@ class BaseConvolutionLayer : public Layer<Dtype> {
 #ifdef FEED_FORWARD_ONLY
   shared_ptr<SharedConvBlobs<Dtype> > shared_blobs_;
 #endif
-
+protected:
+  bool using_col_buffer_;
 };
 
 }  // namespace caffe

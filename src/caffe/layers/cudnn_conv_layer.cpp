@@ -21,6 +21,8 @@ void CuDNNConvolutionLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   ConvolutionLayer<Dtype>::LayerSetUp(bottom, top);
 
+  this->using_col_buffer_ = false;
+
   if(handles_setup_) {
     CleanUp();
   }
