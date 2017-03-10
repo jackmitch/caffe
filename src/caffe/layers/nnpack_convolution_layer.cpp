@@ -12,7 +12,7 @@ namespace caffe {
 namespace {
 
 nnp_convolution_algorithm nnp_algorithm(NNPACKConvolutionParameter_Algorithm algo) {
-  auto algorithm = nnp_convolution_algorithm_auto;
+  enum nnp_convolution_algorithm algorithm = nnp_convolution_algorithm_auto;
   switch (algo) {
     case NNPACKConvolutionParameter_Algorithm_AUTO:
       algorithm = nnp_convolution_algorithm_auto;
@@ -35,7 +35,7 @@ nnp_convolution_algorithm nnp_algorithm(NNPACKConvolutionParameter_Algorithm alg
 
 nnp_convolution_transform_strategy nnp_kts(
     NNPACKConvolutionParameter_KernelTransformStrategy kts) {
-  auto kernel_transform_strategy =
+  enum nnp_convolution_transform_strategy  kernel_transform_strategy =
      nnp_convolution_transform_strategy_tuple_based;
   switch (kts) {
     case NNPACKConvolutionParameter_KernelTransformStrategy_RECOMPUTE:
@@ -76,8 +76,8 @@ void caffe_nnp_convolution_forward(
                                .bottom = static_cast<size_t>(pad.cpu_data()[0]),
                                .left = static_cast<size_t>(pad.cpu_data()[1])};
 
-  const auto algorithm = nnp_algorithm(algo);
-  const auto kernel_transform_strategy = nnp_kts(kts);
+  const nnp_convolution_algorithm algorithm = nnp_algorithm(algo);
+  const nnp_convolution_transform_strategy kernel_transform_strategy = nnp_kts(kts);
 
   const nnp_size optimise = {
     .width = 1,
@@ -88,7 +88,7 @@ void caffe_nnp_convolution_forward(
 
   if (batch_size == 1) {
     VLOG(1) << "Running inference mode";
-    const auto status = nnp_convolution_inference(
+    const enum nnp_status status = nnp_convolution_inference(
         algorithm,
         kernel_transform_strategy,
         input_channels,
@@ -107,7 +107,7 @@ void caffe_nnp_convolution_forward(
     CHECK_EQ(nnp_status_success, status);
   } else {
     VLOG(1) << "Running batched mode";
-    const auto status = nnp_convolution_output(
+    const enum nnp_status status = nnp_convolution_output(
         algorithm,
         batch_size,
         input_channels,
@@ -146,7 +146,7 @@ void NNPackConvolutionLayer<float>::Forward_cpu(
   }
 
   bool is_stride_1 = true;
-  for (auto i = 0; i < num_spatial_axes_; ++i) {
+  for (int i = 0; i < num_spatial_axes_; ++i) {
     if (this->stride_.cpu_data()[i] != 1) {
       is_stride_1 = false;
     }
