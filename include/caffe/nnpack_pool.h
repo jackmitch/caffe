@@ -2,18 +2,29 @@
 
 #include <boost/noncopyable.hpp>
 
+#ifdef _MSC_VER
+#include <Windows.h>
+#else
+#include <unistd.h>
+#endif
+
 #include "nnpack.h"
 
 namespace caffe {
 class NNPACKPool : public boost::noncopyable {
  public:
    NNPACKPool() {
-#ifdef USE_MKL
-     const size_t num_mkl_threads = mkl_get_max_threads();
+
+   int num_mkl_threads;
+
+#ifdef _MSC_VER
+   SYSTEM_INFO sysinfo;
+   GetSystemInfo(&sysinfo);
+   num_mkl_threads = sysinfo.dwNumberOfProcessors;
 #else
-     // Can we do better here?
-     const size_t num_mkl_threads = 1;
+   num_mkl_threads = sysconf(_SC_NPROCESSORS_ONLN);
 #endif
+
      if (num_mkl_threads > 1) {
        pool_ = pthreadpool_create(num_mkl_threads);
      } else {
